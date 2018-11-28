@@ -1,0 +1,11 @@
+FROM ubuntu:latest
+
+RUN apt-get update \
+    && apt-get install -y curl make tar zip gzip \
+    && rm -rf \
+        /usr/share/man \
+        /tmp/* \
+        /var/lib/apt/lists/*
+
+COPY dist/kubor-linux-amd64 /usr/bin/kubor
+RUN chmod +x /usr/bin/kubor
