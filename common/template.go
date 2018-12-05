@@ -13,19 +13,20 @@ func NewTemplate(name string, plain string) (*template.Template, error) {
 		Funcs(sprig.HermeticTxtFuncMap()).
 		Funcs(template.FuncMap{
 			"optional": templateFuncOptional,
+			"opt":      templateFuncOptional,
 		}).
 		Option("missingkey=error").
 		Parse(plain)
 }
 
-func templateFuncOptional(holder interface{}, name string) (interface{}, error) {
+func templateFuncDefault(name string, def interface{}, holder interface{}) (interface{}, error) {
 	v := reflect.ValueOf(holder)
 	t := v.Type()
 	for v.Kind() == reflect.Ptr {
 		v = v.Elem()
 	}
 	if v.IsNil() {
-		return nil, nil
+		return def, nil
 	}
 	for v.Kind() == reflect.Interface {
 		v = v.Elem()
@@ -36,7 +37,7 @@ func templateFuncOptional(holder interface{}, name string) (interface{}, error) 
 			fieldValue := v.FieldByIndex(field.Index)
 			return fieldValue.Interface(), nil
 		}
-		return nil, nil
+		return def, nil
 	case reflect.Map:
 		value := v.MapIndex(reflect.ValueOf(name))
 		if !value.IsValid() {
@@ -44,5 +45,9 @@ func templateFuncOptional(holder interface{}, name string) (interface{}, error) 
 		}
 		return value.Interface(), nil
 	}
-	return nil, fmt.Errorf("cannot get value for '%s' because cannot handle values of type %v", name, t)
+	return def, fmt.Errorf("cannot get value for '%s' because cannot handle values of type %v", name, t)
+}
+
+func templateFuncOptional(name string, holder interface{}) (interface{}, error) {
+	return templateFuncDefault(name, nil, holder)
 }
