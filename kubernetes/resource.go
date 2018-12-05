@@ -34,7 +34,8 @@ func (instance ObjectResource) Create(options *metav1.CreateOptions, subresource
 		options = &metav1.CreateOptions{}
 	}
 	options.TypeMeta = instance.TypeMeta
-	return instance.Resource.Create(instance.Object, *options, subresources...)
+	result, err := instance.Resource.Create(instance.Object, *options, subresources...)
+	return result, OptimizeError(err)
 }
 
 func (instance ObjectResource) Update(options *metav1.UpdateOptions, subresources ...string) (*unstructured.Unstructured, error) {
@@ -42,7 +43,8 @@ func (instance ObjectResource) Update(options *metav1.UpdateOptions, subresource
 		options = &metav1.UpdateOptions{}
 	}
 	options.TypeMeta = instance.TypeMeta
-	return instance.Resource.Update(instance.Object, *options, subresources...)
+	result, err := instance.Resource.Update(instance.Object, *options, subresources...)
+	return result, OptimizeError(err)
 }
 
 func (instance ObjectResource) Delete(options *metav1.DeleteOptions, subresources ...string) error {
@@ -50,7 +52,8 @@ func (instance ObjectResource) Delete(options *metav1.DeleteOptions, subresource
 		options = &metav1.DeleteOptions{}
 	}
 	options.TypeMeta = instance.TypeMeta
-	return instance.Resource.Delete(instance.Name, options, subresources...)
+	err := instance.Resource.Delete(instance.Name, options, subresources...)
+	return OptimizeError(err)
 }
 
 func (instance ObjectResource) Get(options *metav1.GetOptions, subresources ...string) (*unstructured.Unstructured, error) {
@@ -58,7 +61,8 @@ func (instance ObjectResource) Get(options *metav1.GetOptions, subresources ...s
 		options = &metav1.GetOptions{}
 	}
 	options.TypeMeta = instance.TypeMeta
-	return instance.Resource.Get(instance.Name, *options, subresources...)
+	result, err := instance.Resource.Get(instance.Name, *options, subresources...)
+	return result, OptimizeError(err)
 }
 
 func (instance ObjectResource) Watch(options *metav1.ListOptions) (watch.Interface, error) {
@@ -68,5 +72,6 @@ func (instance ObjectResource) Watch(options *metav1.ListOptions) (watch.Interfa
 	options.TypeMeta = instance.TypeMeta
 	options.Watch = true
 	options.FieldSelector = fmt.Sprintf("metadata.name=%s", instance.Name)
-	return instance.Resource.Watch(*options)
+	result, err := instance.Resource.Watch(*options)
+	return result, OptimizeError(err)
 }
