@@ -25,7 +25,7 @@ var (
 	KubeConfigFlags = []cli.Flag{
 		&cli.StringFlag{
 			Name:        "kubeconfig",
-			Usage:       "Path to the kubeconfig file. Optionally you can provide the content of the kubeconfig using environment variable KUBECONFIG.",
+			Usage:       "Path to the kubeconfig file. Optionally you can provide the content of the kubeconfig using environment variable KUBE_CONFIG.",
 			Value:       "",
 			Destination: &kubeConfigPath,
 		},
@@ -79,7 +79,7 @@ func (l *kubeConfigLoader) Load() (*clientcmdapi.Config, error) {
 	config := clientcmdapi.NewConfig()
 	atLeastOneConfigFound := false
 
-	if plainFromEnv, ok := os.LookupEnv("KUBECONFIG"); ok {
+	if plainFromEnv, ok := os.LookupEnv("KUBE_CONFIG"); ok {
 		if fromEnv, err := clientcmd.Load([]byte(plainFromEnv)); err != nil {
 			return nil, err
 		} else if err := mergo.Merge(config, fromEnv); err != nil {
@@ -111,7 +111,7 @@ func (l *kubeConfigLoader) Load() (*clientcmdapi.Config, error) {
 	}
 
 	if !atLeastOneConfigFound {
-		return nil, fmt.Errorf("there is neither argument --kubeconfig nor environment variable KUBECONFIG provided nor does %s exist", defaultKubeConfigPath)
+		return nil, fmt.Errorf("there is neither argument --kubeconfig nor environment variable KUBE_CONFIG provided nor does %s exist", defaultKubeConfigPath)
 	}
 
 	return config, nil
