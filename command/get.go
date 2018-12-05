@@ -22,7 +22,7 @@ func init() {
 }
 
 type Get struct {
-	KubernetesClientCommand
+	Command
 
 	Predicate  common.EvaluatingPredicate
 	SourceHint bool
@@ -48,7 +48,7 @@ func (instance *Get) CreateCliCommands() ([]cli.Command, error) {
 	}}, nil
 }
 
-func (instance *Get) RunForArguments(arguments KubernetesClientCommandArguments) error {
+func (instance *Get) RunWithArguments(arguments CommandArguments) error {
 	task := &getTask{
 		source:        instance,
 		dynamicClient: arguments.DynamicClient,

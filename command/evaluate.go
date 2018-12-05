@@ -47,7 +47,7 @@ func (instance *Evaluate) CreateCliCommands() ([]cli.Command, error) {
 	}}, nil
 }
 
-func (instance *Evaluate) RunForProject(project model.Project) error {
+func (instance *Evaluate) RunWithArguments(arguments CommandArguments) error {
 	task := &evaluateTask{
 		source: instance,
 		first:  true,
@@ -57,7 +57,7 @@ func (instance *Evaluate) RunForProject(project model.Project) error {
 		return err
 	}
 
-	cp, err := project.RenderedTemplatesProvider()
+	cp, err := arguments.Project.RenderedTemplatesProvider()
 	if err != nil {
 		return err
 	}

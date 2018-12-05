@@ -19,7 +19,7 @@ func init() {
 }
 
 type Apply struct {
-	KubernetesClientCommand
+	Command
 
 	Wait      time.Duration
 	Predicate common.EvaluatingPredicate
@@ -46,7 +46,7 @@ func (instance *Apply) CreateCliCommands() ([]cli.Command, error) {
 	}}, nil
 }
 
-func (instance *Apply) RunForArguments(arguments KubernetesClientCommandArguments) error {
+func (instance *Apply) RunWithArguments(arguments CommandArguments) error {
 	task := &applyTask{
 		source:        instance,
 		dynamicClient: arguments.DynamicClient,

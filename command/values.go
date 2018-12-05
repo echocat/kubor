@@ -4,7 +4,6 @@ import (
 	"github.com/urfave/cli"
 	"gopkg.in/yaml.v2"
 	"kubor/common"
-	"kubor/model"
 	"os"
 )
 
@@ -27,7 +26,7 @@ func (instance *Values) CreateCliCommands() ([]cli.Command, error) {
 	}}, nil
 }
 
-func (instance *Values) RunForProject(project model.Project) error {
+func (instance *Values) RunWithArguments(arguments CommandArguments) error {
 	enc := yaml.NewEncoder(os.Stdout)
-	return enc.Encode(project.Values)
+	return enc.Encode(arguments.Project.Values)
 }

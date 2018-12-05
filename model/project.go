@@ -20,10 +20,11 @@ type Project struct {
 	ConditionalValues []ConditionalValues `yaml:"values,omitempty" json:"values,omitempty"`
 
 	// Values set using implicitly.
-	Source string            `yaml:"-" json:"-"`
-	Root   string            `yaml:"-" json:"-"`
-	Values Values            `yaml:"-" json:"-"`
-	Env    map[string]string `yaml:"-" json:"-"`
+	Source  string            `yaml:"-" json:"-"`
+	Root    string            `yaml:"-" json:"-"`
+	Values  Values            `yaml:"-" json:"-"`
+	Env     map[string]string `yaml:"-" json:"-"`
+	Context string            `yaml:"-" json:"-"`
 }
 
 func newProject() Project {
@@ -75,9 +76,10 @@ func NewProjectFactory() *ProjectFactory {
 	return &ProjectFactory{}
 }
 
-func (instance *ProjectFactory) Create() (Project, error) {
+func (instance *ProjectFactory) Create(contextName string) (Project, error) {
 	var err error
 	result := newProject()
+	result.Context = contextName
 
 	if f, err := os.Open(instance.source); os.IsNotExist(err) {
 		if instance.sourceRequired {

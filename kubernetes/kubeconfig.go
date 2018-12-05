@@ -38,12 +38,16 @@ var (
 	}
 )
 
-func NewKubeConfig() (*restclient.Config, error) {
-	clientConfig, _, err := NewKubeClientConfig()
+func NewKubeConfig() (*restclient.Config, string, error) {
+	clientConfig, contextName, err := NewKubeClientConfig()
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
-	return clientConfig.ClientConfig()
+	result, err := clientConfig.ClientConfig()
+	if err != nil {
+		return nil, "", err
+	}
+	return result, contextName, nil
 }
 
 func NewKubeClientConfig() (clientcmd.ClientConfig, string, error) {

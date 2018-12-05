@@ -5,7 +5,6 @@ import (
 	"github.com/urfave/cli"
 	"io"
 	"kubor/common"
-	"kubor/model"
 	"strings"
 )
 
@@ -44,8 +43,8 @@ func (instance *Render) CreateCliCommands() ([]cli.Command, error) {
 	}}, nil
 }
 
-func (instance *Render) RunForProject(project model.Project) error {
-	cp, err := project.RenderedTemplatesProvider()
+func (instance *Render) RunWithArguments(arguments CommandArguments) error {
+	cp, err := arguments.Project.RenderedTemplatesProvider()
 	if err != nil {
 		return err
 	}
