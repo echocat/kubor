@@ -8,13 +8,14 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/dynamic"
 	"kubor/common"
+	"kubor/kubernetes/fixes"
 	"kubor/log"
 	"reflect"
 	"time"
 )
 
 type Apply interface {
-	Execute() error
+	Execute(dry bool) error
 	Wait(timeout time.Duration) error
 	Rollback()
 	String() string
@@ -47,7 +48,7 @@ func (instance ApplyObject) String() string {
 	return instance.object.String()
 }
 
-func (instance *ApplyObject) Execute() error {
+func (instance *ApplyObject) Execute(dry bool) error {
 	l := instance.log.
 		WithField("action", "checkExistence")
 	var err error
@@ -57,6 +58,12 @@ func (instance *ApplyObject) Execute() error {
 			WithField("status", "notFound").
 			Debug("%v does not exist - it will be created.", instance.object)
 		instance.original = nil
+
+		if err := fixes.FixForCreate(instance.object.Object); err != nil {
+			return err
+		}
+
+		return instance.create(dry)
 	} else if err != nil {
 		return err
 	} else {
@@ -69,13 +76,13 @@ func (instance *ApplyObject) Execute() error {
 			WithField("status", "success").
 			WithDeepFieldOn("response", original, l.IsDebugEnabled).
 			Debug("%v does exist - it will be updated.", instance.object)
-	}
 
-	if instance.original == nil {
-		return instance.create()
-	}
+		if err := fixes.FixForUpdate(*original, instance.object.Object); err != nil {
+			return err
+		}
 
-	return instance.update()
+		return instance.update(dry)
+	}
 }
 
 func (instance *ApplyObject) Wait(timeout time.Duration) (err error) {
@@ -158,9 +165,11 @@ func (instance *ApplyObject) Wait(timeout time.Duration) (err error) {
 	}
 }
 
-func (instance *ApplyObject) create() (err error) {
+func (instance *ApplyObject) create(dry bool) (err error) {
 	start := time.Now()
-	l := instance.log.WithField("action", "create")
+	l := instance.log.
+		WithField("action", "create").
+		WithField("dry", dry)
 	defer func() {
 		ld := l.
 			WithField("duration", time.Now().Sub(start)).
@@ -185,16 +194,22 @@ func (instance *ApplyObject) create() (err error) {
 		}
 	}()
 	l.Debug("Create %v...", instance.object)
-	if instance.applied, err = instance.object.Create(nil); err != nil {
+	opts := metav1.CreateOptions{}
+	if dry {
+		opts.DryRun = []string{"All"}
+	}
+	if instance.applied, err = instance.object.Create(&opts); err != nil {
 		instance.applied = nil
 		return
 	}
 	return
 }
 
-func (instance *ApplyObject) update() (err error) {
+func (instance *ApplyObject) update(dry bool) (err error) {
 	start := time.Now()
-	l := instance.log.WithField("action", "update")
+	l := instance.log.
+		WithField("action", "update").
+		WithField("dry", dry)
 	defer func() {
 		ld := l.
 			WithField("duration", time.Now().Sub(start)).
@@ -219,7 +234,11 @@ func (instance *ApplyObject) update() (err error) {
 		}
 	}()
 	l.Debug("Update %v...", instance.object)
-	if instance.applied, err = instance.object.Update(nil); err != nil {
+	opts := metav1.UpdateOptions{}
+	if dry {
+		opts.DryRun = []string{"All"}
+	}
+	if instance.applied, err = instance.object.Update(&opts); err != nil {
 		instance.applied = nil
 		return
 	}
@@ -328,14 +347,14 @@ func (instance *ApplySet) Add(apply Apply) {
 	*instance = append(*instance, apply)
 }
 
-func (instance ApplySet) Execute() (err error) {
+func (instance ApplySet) Execute(dry bool) (err error) {
 	defer func() {
-		if err != nil {
+		if err != nil && !dry {
 			instance.Rollback()
 		}
 	}()
 	for _, child := range instance {
-		if err = child.Execute(); err != nil {
+		if err = child.Execute(dry); err != nil {
 			err = fmt.Errorf("cannot apply %v: %v", child, err)
 			return
 		}

@@ -4,9 +4,7 @@ require (
 	github.com/Masterminds/semver v1.4.2 // indirect
 	github.com/Masterminds/sprig v2.16.0+incompatible
 	github.com/aokoli/goutils v1.0.1 // indirect
-	github.com/ghodss/yaml v1.0.0 // indirect
 	github.com/gogo/protobuf v1.1.1 // indirect
-	github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b // indirect
 	github.com/google/gofuzz v0.0.0-20170612174753-24818f796faf // indirect
 	github.com/google/uuid v1.1.0 // indirect
 	github.com/huandu/xstrings v1.2.0 // indirect
@@ -27,9 +25,9 @@ require (
 	google.golang.org/appengine v1.3.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v2 v2.2.1
-	k8s.io/api v0.0.0-20181121071145-b7bd5f2d334c // indirect
-	k8s.io/apimachinery v0.0.0-20181121071008-d4f83ca2e260
-	k8s.io/client-go v9.0.0+incompatible
+	k8s.io/api v0.0.0-20181204000039-89a74a8d264df0e993299876a8cde88379b940ee // indirect
+	k8s.io/apimachinery v0.0.0-20181204150028-2b1284ed4c93a43499e781493253e2ac5959c4fd
+	k8s.io/client-go v10.0.0+incompatible
 	k8s.io/klog v0.1.0 // indirect
 	sigs.k8s.io/yaml v1.1.0 // indirect
 )

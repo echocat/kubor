@@ -65,19 +65,19 @@ type DeploymentAggregation struct {
 }
 
 func (instance DeploymentAggregation) Desired() *int32 {
-	return TryCastToInt32(common.MustEvaluateExpression("spec.replicas", instance.Object))
+	return TryCastToInt32(common.GetObjectPathValue(instance.Object, "spec", "replicas"))
 }
 
 func (instance DeploymentAggregation) Ready() *int32 {
-	return TryCastToInt32(common.MustEvaluateExpression("status.readyReplicas", instance.Object))
+	return TryCastToInt32(common.GetObjectPathValue(instance.Object, "spec", "readyReplicas"))
 }
 
 func (instance DeploymentAggregation) UpToDate() *int32 {
-	return TryCastToInt32(common.MustEvaluateExpression("status.updatedReplicas", instance.Object))
+	return TryCastToInt32(common.GetObjectPathValue(instance.Object, "status", "updatedReplicas"))
 }
 
 func (instance DeploymentAggregation) Available() *int32 {
-	return TryCastToInt32(common.MustEvaluateExpression("status.availableReplicas", instance.Object))
+	return TryCastToInt32(common.GetObjectPathValue(instance.Object, "status", "availableReplicas"))
 }
 
 func (instance DeploymentAggregation) IsReady() *bool {
@@ -95,19 +95,19 @@ type DaemonSetAggregation struct {
 }
 
 func (instance DaemonSetAggregation) Desired() *int32 {
-	return TryCastToInt32(common.MustEvaluateExpression("status.desiredNumberScheduled", instance.Object))
+	return TryCastToInt32(common.GetObjectPathValue(instance.Object, "status", "desiredNumberScheduled"))
 }
 
 func (instance DaemonSetAggregation) Ready() *int32 {
-	return TryCastToInt32(common.MustEvaluateExpression("status.numberReady", instance.Object))
+	return TryCastToInt32(common.GetObjectPathValue(instance.Object, "status", "numberReady"))
 }
 
 func (instance DaemonSetAggregation) UpToDate() *int32 {
-	return TryCastToInt32(common.MustEvaluateExpression("status.updatedNumberScheduled", instance.Object))
+	return TryCastToInt32(common.GetObjectPathValue(instance.Object, "status", "updatedNumberScheduled"))
 }
 
 func (instance DaemonSetAggregation) Available() *int32 {
-	return TryCastToInt32(common.MustEvaluateExpression("status.numberAvailable", instance.Object))
+	return TryCastToInt32(common.GetObjectPathValue(instance.Object, "status", "numberAvailable"))
 }
 
 func (instance DaemonSetAggregation) IsReady() *bool {
@@ -125,15 +125,15 @@ type StatefulSetAggregation struct {
 }
 
 func (instance StatefulSetAggregation) Desired() *int32 {
-	return TryCastToInt32(common.MustEvaluateExpression("spec.replicas", instance.Object))
+	return TryCastToInt32(common.GetObjectPathValue(instance.Object, "spec", "replicas"))
 }
 
 func (instance StatefulSetAggregation) Ready() *int32 {
-	return TryCastToInt32(common.MustEvaluateExpression("status.readyReplicas", instance.Object))
+	return TryCastToInt32(common.GetObjectPathValue(instance.Object, "status", "readyReplicas"))
 }
 
 func (instance StatefulSetAggregation) UpToDate() *int32 {
-	return TryCastToInt32(common.MustEvaluateExpression("status.updatedReplicas", instance.Object))
+	return TryCastToInt32(common.GetObjectPathValue(instance.Object, "status", "updatedReplicas"))
 }
 
 func (instance StatefulSetAggregation) Available() *int32 {
