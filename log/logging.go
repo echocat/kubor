@@ -20,12 +20,14 @@ type Logger interface {
 	WithDeepFieldOn(key string, value interface{}, on func() bool) Logger
 	WithError(err error) Logger
 
+	Trace(msg string, args ...interface{})
 	Debug(msg string, args ...interface{})
 	Info(msg string, args ...interface{})
 	Warn(msg string, args ...interface{})
 	Error(msg string, args ...interface{})
 	Fatal(msg string, args ...interface{})
 
+	IsTraceEnabled() bool
 	IsDebugEnabled() bool
 	IsInfoEnabled() bool
 	IsWarnEnabled() bool
@@ -56,6 +58,10 @@ func WithError(err error) Logger {
 	return DefaultLogger.WithError(err)
 }
 
+func Trace(msg string, args ...interface{}) {
+	DefaultLogger.Trace(msg, args...)
+}
+
 func Debug(msg string, args ...interface{}) {
 	DefaultLogger.Debug(msg, args...)
 }
@@ -74,6 +80,10 @@ func Error(msg string, args ...interface{}) {
 
 func Fatal(msg string, args ...interface{}) {
 	DefaultLogger.Fatal(msg, args...)
+}
+
+func IsTraceEnabled() bool {
+	return DefaultLogger.IsTraceEnabled()
 }
 
 func IsDebugEnabled() bool {

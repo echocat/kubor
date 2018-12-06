@@ -77,6 +77,10 @@ func (instance *LogrusLogger) WithError(err error) Logger {
 	return instance.CreateEntryLogger().WithError(err)
 }
 
+func (instance *LogrusLogger) Trace(msg string, args ...interface{}) {
+	instance.CreateEntryLogger().Trace(msg, args...)
+}
+
 func (instance *LogrusLogger) Debug(msg string, args ...interface{}) {
 	instance.CreateEntryLogger().Debug(msg, args...)
 }
@@ -95,6 +99,10 @@ func (instance *LogrusLogger) Error(msg string, args ...interface{}) {
 
 func (instance *LogrusLogger) Fatal(msg string, args ...interface{}) {
 	instance.CreateEntryLogger().Fatal(msg, args...)
+}
+
+func (instance *LogrusLogger) IsTraceEnabled() bool {
+	return instance.Delegate.Level >= logrus.TraceLevel
 }
 
 func (instance *LogrusLogger) IsDebugEnabled() bool {
@@ -120,23 +128,27 @@ func (instance *LogrusLogger) IsFatalEnabled() bool {
 func (instance *LogrusLogger) Flags() []cli.Flag {
 	return []cli.Flag{
 		cli.GenericFlag{
-			Name:  "logLevel",
-			Usage: "Specifies the minimum required log level.",
-			Value: &instance.Level,
+			Name:   "logLevel",
+			Usage:  "Specifies the minimum required log level.",
+			EnvVar: "KUBOR_LOG_LEVEL",
+			Value:  &instance.Level,
 		},
 		cli.GenericFlag{
-			Name:  "logFormat",
-			Usage: "Specifies format output (text or json).",
-			Value: &instance.Format,
+			Name:   "logFormat",
+			Usage:  "Specifies format output (text or json).",
+			EnvVar: "KUBOR_LOG_FORMAT",
+			Value:  &instance.Format,
 		},
 		cli.GenericFlag{
-			Name:  "logColorMode",
-			Usage: "Specifies if the output is in colors or not (auto, never or always).",
-			Value: &instance.ColorMode,
+			Name:   "logColorMode",
+			Usage:  "Specifies if the output is in colors or not (auto, never or always).",
+			EnvVar: "KUBOR_LOG_COLOR_MODE",
+			Value:  &instance.ColorMode,
 		},
 		cli.BoolFlag{
 			Name:        "logCaller",
 			Usage:       "If true the caller details will be logged too.",
+			EnvVar:      "KUBOR_LOG_CALLER",
 			Destination: &instance.ReportCaller,
 		},
 	}
@@ -197,6 +209,10 @@ func (instance *LogrusEntry) WithError(err error) Logger {
 	}
 }
 
+func (instance *LogrusEntry) Trace(msg string, args ...interface{}) {
+	instance.Delegate.Tracef(msg, args...)
+}
+
 func (instance *LogrusEntry) Debug(msg string, args ...interface{}) {
 	instance.Delegate.Debugf(msg, args...)
 }
@@ -215,6 +231,10 @@ func (instance *LogrusEntry) Error(msg string, args ...interface{}) {
 
 func (instance *LogrusEntry) Fatal(msg string, args ...interface{}) {
 	instance.Delegate.Fatalf(msg, args...)
+}
+
+func (instance *LogrusEntry) IsTraceEnabled() bool {
+	return instance.Root.IsTraceEnabled()
 }
 
 func (instance *LogrusEntry) IsDebugEnabled() bool {

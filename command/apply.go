@@ -34,13 +34,15 @@ func (instance *Apply) CreateCliCommands() ([]cli.Command, error) {
 			cli.DurationFlag{
 				Name:        "wait, w",
 				Usage:       "If set to value larger than 0 it will wait for this amount of time for successful running environment which was deployed. If it fails it will try to rollback.",
+				EnvVar:      "KUBOR_WAIT",
 				Value:       time.Minute * 5,
 				Destination: &instance.Wait,
 			},
 			cli.GenericFlag{
-				Name:  "predicate, p",
-				Usage: "Filters every object that should be listed. Empty allows everything. Pattern: \"[!]<template>=<must match regex>\", Example: \"{{.spec.name}}=Foo.*\"",
-				Value: &instance.Predicate,
+				Name:   "predicate, p",
+				Usage:  "Filters every object that should be listed. Empty allows everything. Pattern: \"[!]<template>=<must match regex>\", Example: \"{{.spec.name}}=Foo.*\"",
+				EnvVar: "KUBOR_PREDICATE",
+				Value:  &instance.Predicate,
 			},
 		},
 	}}, nil

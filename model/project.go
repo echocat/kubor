@@ -45,15 +45,15 @@ func (instance Project) Validate() error {
 func (instance *Project) Save() error {
 	dir := filepath.Dir(instance.Source)
 	if err := os.MkdirAll(dir, 0755); err != nil {
-		return fmt.Errorf("cannot create parent directory for project file '%s': %v", instance.Source, err)
+		return fmt.Errorf("cannot create parent directory for source file '%s': %v", instance.Source, err)
 	} else if f, err := os.OpenFile(instance.Source, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0644); err != nil {
-		return fmt.Errorf("cannot save project file '%s': %v", instance.Source, err)
+		return fmt.Errorf("cannot save source file '%s': %v", instance.Source, err)
 	} else {
 		//noinspection GoUnhandledErrorResult
 		defer f.Close()
 		encoder := yaml.NewEncoder(f)
 		if err := encoder.Encode(instance); err != nil {
-			return fmt.Errorf("cannot save project file '%s': %v", instance.Source, err)
+			return fmt.Errorf("cannot save source file '%s': %v", instance.Source, err)
 		}
 		return nil
 	}
@@ -83,17 +83,17 @@ func (instance *ProjectFactory) Create(contextName string) (Project, error) {
 
 	if f, err := os.Open(instance.source); os.IsNotExist(err) {
 		if instance.sourceRequired {
-			return Project{}, fmt.Errorf("could not find project file '%s'", instance.source)
+			return Project{}, fmt.Errorf("could not find source file '%s'", instance.source)
 		}
 	} else if err != nil {
-		return Project{}, fmt.Errorf("cannot open project file '%s': %v", instance.source, err)
+		return Project{}, fmt.Errorf("cannot open source file '%s': %v", instance.source, err)
 	} else {
 		//noinspection GoUnhandledErrorResult
 		defer f.Close()
 		if err := yaml.NewDecoder(f).Decode(&result); err != nil {
-			return Project{}, fmt.Errorf("cannot read project file '%s': %v", instance.source, err)
+			return Project{}, fmt.Errorf("cannot read source file '%s': %v", instance.source, err)
 		} else if err := result.Validate(); err != nil {
-			return Project{}, fmt.Errorf("cannot read project file '%s': %v", instance.source, err)
+			return Project{}, fmt.Errorf("cannot read source file '%s': %v", instance.source, err)
 		}
 	}
 
@@ -162,34 +162,39 @@ func (instance *ProjectFactory) populateStage2(input Project) (Project, error) {
 func (instance *ProjectFactory) Flags() []cli.Flag {
 	return []cli.Flag{
 		&cli.StringFlag{
-			Name:        "project",
-			Usage:       "Specifies the location of the project file.",
-			Value:       "project.yaml",
+			Name:        "source",
+			Usage:       "Specifies the location of the kubor source file.",
+			Value:       ".kubor.yaml",
+			EnvVar:      "KUBOR_SOURCE",
 			Destination: &instance.source,
 		},
 		&cli.StringFlag{
 			Name:        "groupId",
-			Usage:       "If set it will overrides groupId from project file.",
+			Usage:       "If set it will overrides groupId from source file.",
+			EnvVar:      "KUBOR_GROUP_ID",
 			Destination: &instance.groupId,
 		},
 		&cli.StringFlag{
 			Name:        "artifactId",
-			Usage:       "If set it will overrides artifactId from project file.",
+			Usage:       "If set it will overrides artifactId from source file.",
+			EnvVar:      "KUBOR_ARTIFACT_ID",
 			Destination: &instance.artifactId,
 		},
 		&cli.StringFlag{
 			Name:        "release",
-			Usage:       "If set it will overrides release from project file.",
+			Usage:       "If set it will overrides release from source file.",
+			EnvVar:      "KUBOR_RELEASE",
 			Destination: &instance.release,
 		},
-		&cli.BoolFlag{
-			Name:        "projectRequired",
-			Usage:       "if set to true the project file has to exist if not the execution will fail",
+		&cli.BoolTFlag{
+			Name:        "sourceRequired",
+			Usage:       "If set to true the source file has to exist if not the execution will fail.",
+			EnvVar:      "KUBOR_SOURCE_REQUIRED",
 			Destination: &instance.sourceRequired,
 		},
 		&cli.GenericFlag{
 			Name:  "value, V",
-			Usage: "specifies values which should be provided to the runtime. Format <name>=[<value>]",
+			Usage: "Specifies values which should be provided to the runtime. Format <name>=[<value>].",
 			Value: &instance.values,
 		},
 	}

@@ -30,6 +30,8 @@ func main() {
 
 	app := cli.NewApp()
 	app.Name = "kubor"
+	app.Description = "Safely bringing repositories using templating and charting inside CI/CD pipelines to Kubernetes."
+	app.Email = "info@leverton.ai"
 	app.Version = extVersion
 	//noinspection GoBoolExpressions
 	if extCompiled != "" {

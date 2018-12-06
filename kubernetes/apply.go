@@ -136,12 +136,20 @@ func (instance *ApplyObject) Wait(timeout time.Duration) (err error) {
 	for afterCh := time.After(timeout); ; {
 		select {
 		case event := <-rc:
-			log.
-				WithDeepField("event", event).
-				Debug("Received event %v on %v.", event.Type, event.Object.GetObjectKind().GroupVersionKind())
+			eventObjectInfo, _ := GetObjectInfo(event.Object)
+			ld := log.
+				WithDeepFieldOn("event", event, log.IsTraceEnabled)
 
-			if instance.matchesReferenceOfObjectToApplyAndGenerationAndIsReady(event.Object, *generation) {
+			if !instance.matchesReferenceOfObjectToApplyAndGeneration(event.Object, *generation) {
+				ld.Trace("Received event %v on %v which does not match %v and will be ignored.", event.Type, eventObjectInfo, instance.object)
+			} else if ready := IsReady(event.Object); ready == nil {
+				ld.Debug("Received event %v on %v does not support ready check and will be assumed as ready now.", event.Type, eventObjectInfo)
 				return
+			} else if *ready {
+				ld.Debug("Received event %v on %v which passes the ready check.", event.Type, eventObjectInfo)
+				return
+			} else {
+				ld.Debug("Received event %v on %v which does not pass the ready check. Continue wait...", event.Type, eventObjectInfo)
 			}
 		case <-afterCh:
 			err = common.NewTimeoutError("%v was not ready after %v", resource, timeout)
@@ -156,7 +164,7 @@ func (instance *ApplyObject) create() (err error) {
 	defer func() {
 		ld := l.
 			WithField("duration", time.Now().Sub(start)).
-			WithDeepFieldOn("response", instance.applied, l.IsDebugEnabled)
+			WithDeepFieldOn("response", instance.applied, l.IsTraceEnabled)
 		if err != nil {
 			ldd := ld.
 				WithError(err).
@@ -190,7 +198,7 @@ func (instance *ApplyObject) update() (err error) {
 	defer func() {
 		ld := l.
 			WithField("duration", time.Now().Sub(start)).
-			WithDeepFieldOn("response", instance.applied, l.IsDebugEnabled)
+			WithDeepFieldOn("response", instance.applied, l.IsTraceEnabled)
 		if err != nil {
 			ldd := ld.
 				WithError(err).

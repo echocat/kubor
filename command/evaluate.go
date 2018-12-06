@@ -36,12 +36,14 @@ func (instance *Evaluate) CreateCliCommands() ([]cli.Command, error) {
 			cli.BoolTFlag{
 				Name:        "sourceHint, sh",
 				Usage:       "Prints to the output a comment which indicates where the rendered content organically comes from.",
+				EnvVar:      "KUBOR_SOURCE_HINT",
 				Destination: &instance.SourceHint,
 			},
 			cli.GenericFlag{
-				Name:  "predicate, p",
-				Usage: "Filters every object that should be listed. Empty allows everything. Pattern: \"[!]<template>=<must match regex>\", Example: \"{{.spec.name}}=Foo.*\"",
-				Value: &instance.Predicate,
+				Name:   "predicate, p",
+				Usage:  "Filters every object that should be listed. Empty allows everything. Pattern: \"[!]<template>=<must match regex>\", Example: \"{{.spec.name}}=Foo.*\"",
+				EnvVar: "KUBOR_PREDICATE",
+				Value:  &instance.Predicate,
 			},
 		},
 	}}, nil

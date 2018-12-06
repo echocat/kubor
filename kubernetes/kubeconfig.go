@@ -27,12 +27,14 @@ var (
 			Name:        "kubeconfig",
 			Usage:       "Path to the kubeconfig file. Optionally you can provide the content of the kubeconfig using environment variable KUBE_CONFIG.",
 			Value:       "",
+			EnvVar:      "KUBOR_KUBECONFIG",
 			Destination: &kubeConfigPath,
 		},
 		&cli.StringFlag{
 			Name:        "context, c",
 			Usage:       "Context of the kubeconfig which is used for the actual execution.",
 			Value:       "",
+			EnvVar:      "KUBOR_CONTEXT",
 			Destination: &kubeContext,
 		},
 	}

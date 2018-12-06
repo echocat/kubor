@@ -5,6 +5,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/apis/meta/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"reflect"
 )
@@ -17,10 +18,14 @@ type ObjectInfo struct {
 	GroupVersionResource schema.GroupVersionResource
 }
 
-func GetObjectInfo(object v1.Object) (ObjectInfo, error) {
+func GetObjectInfo(object runtime.Object) (ObjectInfo, error) {
 	objk, ok := object.(schema.ObjectKind)
 	if !ok {
 		return ObjectInfo{}, fmt.Errorf("%v is not of type schema.ObjectKind", reflect.TypeOf(object))
+	}
+	objv, ok := object.(v1.Object)
+	if !ok {
+		return ObjectInfo{}, fmt.Errorf("%v is not of type v1.Object", reflect.TypeOf(object))
 	}
 	kind := objk.GroupVersionKind()
 	if kind.Kind == "" {
@@ -31,11 +36,11 @@ func GetObjectInfo(object v1.Object) (ObjectInfo, error) {
 	}
 	groupVersionResource, _ := meta.UnsafeGuessKindToResource(kind)
 	typeMeta := GroupVersionKindToTypeMeta(kind)
-	namespace := object.GetNamespace()
+	namespace := objv.GetNamespace()
 	if namespace == "" {
 		return ObjectInfo{}, fmt.Errorf("meta.namespace is not set or empty")
 	}
-	name := object.GetName()
+	name := objv.GetName()
 	if name == "" {
 		return ObjectInfo{}, fmt.Errorf("meta.name is not set or empty")
 	}
