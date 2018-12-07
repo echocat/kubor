@@ -29,7 +29,9 @@ jobs:
         - docker build -t levertonai/kubor:alpine-$TRAVIS_BRANCH .
         - docker build -t levertonai/kubor:ubuntu-$TRAVIS_BRANCH .
         - docker run --rm levertonai/kubor:alpine-$TRAVIS_BRANCH kubor -v 2>&1 | grep TEST${TRAVIS_BRANCH}TEST
+        - docker run --rm levertonai/kubor:alpine-$TRAVIS_BRANCH kubectl version
         - docker run --rm levertonai/kubor:ubuntu-$TRAVIS_BRANCH kubor -v 2>&1 | grep TEST${TRAVIS_BRANCH}TEST
+        - docker run --rm levertonai/kubor:ubuntu-$TRAVIS_BRANCH kubectl version
     - stage: release
       name: Release
       if: tag =~ ^v\d+\.\d+\.\d+|snapshot-.+$
