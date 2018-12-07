@@ -26,10 +26,10 @@ jobs:
         - export LDFLAGS="-X main.extVersion=TEST${TRAVIS_BRANCH}TEST -X main.extCompiled=`date -u +%Y-%m-%dT%H:%M:%SZ`"
         - GOOS=linux GOARCH=amd64 go build -ldflags "$LDFLAGS" -o dist/kubor-linux-amd64 ./main
 
-        - docker build -t -f Dockerfile        levertonai/kubor:alpine-$TRAVIS_BRANCH .
+        - docker build -f Dockerfile -t        levertonai/kubor:alpine-$TRAVIS_BRANCH .
         - .docker/test-image.sh                levertonai/kubor:alpine-$TRAVIS_BRANCH
 
-        - docker build -t -f Dockerfile.ubuntu levertonai/kubor:ubuntu-$TRAVIS_BRANCH .
+        - docker build -f Dockerfile.ubuntu -t levertonai/kubor:ubuntu-$TRAVIS_BRANCH .
         - .docker/test-image.sh                levertonai/kubor:ubuntu-$TRAVIS_BRANCH
     - stage: release
       name: Release
