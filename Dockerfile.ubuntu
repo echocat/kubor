@@ -1,11 +1,12 @@
 FROM ubuntu:latest
 
+COPY dist/kubor-linux-amd64 /usr/bin/kubor
 RUN apt-get update \
     && apt-get install -y curl make tar zip gzip \
+    && curl -sSL https://storage.googleapis.com/kubernetes-release/release/v1.13.0/bin/linux/amd64/kubectl > /usr/bin/kubectl \
+    && chmod +x /usr/bin/kubectl \
+    && chmod +x /usr/bin/kubor \
     && rm -rf \
         /usr/share/man \
         /tmp/* \
         /var/lib/apt/lists/*
-
-COPY dist/kubor-linux-amd64 /usr/bin/kubor
-RUN chmod +x /usr/bin/kubor

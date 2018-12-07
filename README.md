@@ -4,9 +4,11 @@
 
 Safely bringing repositories using templating and charting inside CI/CD pipelines to Kubernetes.
 
+**WARNING: This project is still under heavy development. Everything could still change.**
+
 ## Contributing
 
-kubor is an open source project by [LEVERTON GmbH](https://levertonai.org).
+kubor is an open source project by [LEVERTON GmbH](https://leverton.ai).
 So if you want to make this project even better, you can contribute to this project on [Github](https://github.com/levertonai/kubor)
 by [fork us](https://github.com/levertonai/kubor/fork).
 
