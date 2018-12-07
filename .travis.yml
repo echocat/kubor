@@ -27,10 +27,10 @@ jobs:
         - GOOS=linux GOARCH=amd64 go build -ldflags "$LDFLAGS" -o dist/kubor-linux-amd64 ./main
 
         - docker build -f Dockerfile -t        levertonai/kubor:alpine-$TRAVIS_BRANCH .
-        - .docker/test-image.sh                levertonai/kubor:alpine-$TRAVIS_BRANCH
+        - sh .docker/test-image.sh             levertonai/kubor:alpine-$TRAVIS_BRANCH
 
         - docker build -f Dockerfile.ubuntu -t levertonai/kubor:ubuntu-$TRAVIS_BRANCH .
-        - .docker/test-image.sh                levertonai/kubor:ubuntu-$TRAVIS_BRANCH
+        - sh .docker/test-image.sh             levertonai/kubor:ubuntu-$TRAVIS_BRANCH
     - stage: release
       name: Release
       if: tag =~ ^v\d+\.\d+\.\d+|snapshot-.+$
