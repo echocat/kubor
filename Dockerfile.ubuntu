@@ -1,11 +1,13 @@
 FROM ubuntu:latest
 
+COPY .docker/install-generic.sh /tmp/install-generic.sh
+COPY .docker/build.env /tmp/build.env
 COPY dist/kubor-linux-amd64 /usr/bin/kubor
-RUN apt-get update \
+
+RUN chmod +x /usr/bin/kubor \
+    && apt-get update \
     && apt-get install -y curl make tar zip gzip \
-    && curl -sSL https://storage.googleapis.com/kubernetes-release/release/v1.13.0/bin/linux/amd64/kubectl > /usr/bin/kubectl \
-    && chmod +x /usr/bin/kubectl \
-    && chmod +x /usr/bin/kubor \
+    && sh /tmp/install-generic.sh \
     && rm -rf \
         /usr/share/man \
         /tmp/* \
