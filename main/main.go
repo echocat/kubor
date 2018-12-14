@@ -20,7 +20,7 @@ const (
 var (
 	extVersion  = "development"
 	extRevision = "development"
-	extCompiled = time.Now().Format(timeFormat)
+	extCompiled = ""
 
 	versionCommand = cli.Command{
 		Name:  "version",
@@ -47,6 +47,9 @@ func main() {
 		Destination: &helpRequested,
 	}
 
+	if extCompiled == "" {
+		extCompiled = time.Now().Format(timeFormat)
+	}
 	compiled, err := time.Parse(timeFormat, extCompiled)
 	if err != nil {
 		panic(fmt.Sprintf("illegal main.Compiled value '%s': %v", extCompiled, err))
