@@ -23,8 +23,9 @@ jobs:
       script:
         - go test -v ./...
 
-        - export LDFLAGS="-X main.extVersion=TEST${TRAVIS_BRANCH}TEST -X main.extCompiled=`date -u +%Y-%m-%dT%H:%M:%SZ`"
+        - export LDFLAGS="-X main.extVersion=TEST${TRAVIS_BRANCH}TEST -X main.extRevision=TEST${TRAVIS_COMMIT}TEST -X main.extCompiled=`date -u +%Y-%m-%dT%H:%M:%SZ`"
         - GOOS=linux GOARCH=amd64 go build -ldflags "$LDFLAGS" -o dist/kubor-linux-amd64 ./main
+        - dist/kubor-linux-amd64 version
 
         - docker build -f Dockerfile -t        levertonai/kubor:alpine-$TRAVIS_BRANCH .
         - sh .docker/test-image.sh             levertonai/kubor:alpine-$TRAVIS_BRANCH
@@ -38,7 +39,7 @@ jobs:
         - mkdir -p dist
         - echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
       script:
-        - export LDFLAGS="-X main.extVersion=$TRAVIS_BRANCH -X main.extCompiled=`date -u +%Y-%m-%dT%H:%M:%SZ`"
+        - export LDFLAGS="-X main.extVersion=$TRAVIS_BRANCH -X main.extRevision=$TRAVIS_COMMIT -X main.extCompiled=`date -u +%Y-%m-%dT%H:%M:%SZ`"
         - GOOS=linux   GOARCH=amd64 go build -ldflags "$LDFLAGS" -o dist/kubor-linux-amd64       ./main
         - GOOS=linux   GOARCH=386   go build -ldflags "$LDFLAGS" -o dist/kubor-linux-386         ./main
         - GOOS=darwin  GOARCH=amd64 go build -ldflags "$LDFLAGS" -o dist/kubor-darwin-amd64      ./main

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/urfave/cli"
 	"gopkg.in/yaml.v2"
+	"io"
 	"kubor/common"
 	"kubor/log"
 	"os"
@@ -61,6 +62,10 @@ func (instance *Project) Save() error {
 
 func (instance Project) RenderedTemplatesProvider() (ContentProvider, error) {
 	return instance.Templating.RenderedTemplatesProvider(instance)
+}
+
+func (instance Project) RenderedTemplateFile(file string, writer io.Writer) error {
+	return instance.Templating.RenderTemplateFile(file, instance, writer)
 }
 
 type ProjectFactory struct {
@@ -143,6 +148,9 @@ func (instance *ProjectFactory) populateStage1(input Project) (Project, error) {
 	if instance.release != "" {
 		result.Release = instance.release
 	}
+	if result.Release == "" {
+		result.Release = "latest"
+	}
 	result.Env = common.Environ()
 	return result, nil
 }
@@ -193,7 +201,7 @@ func (instance *ProjectFactory) Flags() []cli.Flag {
 			Destination: &instance.sourceRequired,
 		},
 		&cli.GenericFlag{
-			Name:  "value, V",
+			Name:  "value, v",
 			Usage: "Specifies values which should be provided to the runtime. Format <name>=[<value>].",
 			Value: &instance.values,
 		},

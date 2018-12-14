@@ -5,6 +5,7 @@ import (
 	"github.com/urfave/cli"
 	"io"
 	"kubor/common"
+	"os"
 	"strings"
 )
 
@@ -25,7 +26,8 @@ func init() {
 type Render struct {
 	Command
 
-	SourceHint bool
+	TemplateFile string
+	SourceHint   bool
 }
 
 func (instance *Render) CreateCliCommands() ([]cli.Command, error) {
@@ -34,9 +36,17 @@ func (instance *Render) CreateCliCommands() ([]cli.Command, error) {
 		Usage:  "Renders the instances of this project using the provided values.",
 		Action: instance.ExecuteFromCli,
 		Flags: []cli.Flag{
+			cli.StringFlag{
+				Name: "file, f",
+				Usage: "If specified this file will be used as template and rendered with the current kubor environment\n" +
+					"\tand printed to stdout. If empty all project template files will be used.",
+				EnvVar:      "KUBOR_TEMPLATE_FILE",
+				Destination: &instance.TemplateFile,
+			},
 			cli.BoolTFlag{
-				Name:        "sourceHint, sh",
-				Usage:       "Prints to the output a comment which indicates where the rendered content organically comes from.",
+				Name: "sourceHint",
+				Usage: "Prints to the output a comment which indicates where the rendered content organically\n" +
+					"\tcomes from. This will be ignored if --file is used.",
 				EnvVar:      "KUBOR_SOURCE_HINT",
 				Destination: &instance.SourceHint,
 			},
@@ -45,6 +55,10 @@ func (instance *Render) CreateCliCommands() ([]cli.Command, error) {
 }
 
 func (instance *Render) RunWithArguments(arguments CommandArguments) error {
+	if instance.TemplateFile != "" {
+		return arguments.Project.RenderedTemplateFile(instance.TemplateFile, os.Stdout)
+	}
+
 	cp, err := arguments.Project.RenderedTemplatesProvider()
 	if err != nil {
 		return err

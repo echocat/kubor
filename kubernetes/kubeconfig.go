@@ -24,8 +24,9 @@ var (
 	kubeContext     string
 	KubeConfigFlags = []cli.Flag{
 		&cli.StringFlag{
-			Name:        "kubeconfig",
-			Usage:       "Path to the kubeconfig file. Optionally you can provide the content of the kubeconfig using environment variable KUBE_CONFIG.",
+			Name: "kubeconfig",
+			Usage: "Path to the kubeconfig file. Optionally you can provide the content of the kubeconfig using\n" +
+				"\tenvironment variable KUBE_CONFIG.",
 			Value:       "",
 			EnvVar:      "KUBOR_KUBECONFIG",
 			Destination: &kubeConfigPath,

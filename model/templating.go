@@ -39,7 +39,7 @@ func (instance Templating) RenderedTemplatesProvider(data interface{}) (ContentP
 			buf := new(bytes.Buffer)
 			file := files[i]
 			i++
-			if err := instance.renderFile(file, data, buf); err != nil {
+			if err := instance.RenderTemplateFile(file, data, buf); err != nil {
 				return file, nil, err
 			}
 			return file, buf.Bytes(), nil
@@ -47,7 +47,7 @@ func (instance Templating) RenderedTemplatesProvider(data interface{}) (ContentP
 	}
 }
 
-func (instance Templating) renderFile(file string, data interface{}, writer io.Writer) error {
+func (instance Templating) RenderTemplateFile(file string, data interface{}, writer io.Writer) error {
 	if content, err := ioutil.ReadFile(file); err != nil {
 		return fmt.Errorf("cannot read template file '%s': %v", file, err)
 	} else if tmpl, err := instance.newTemplate(file, string(content)); err != nil {

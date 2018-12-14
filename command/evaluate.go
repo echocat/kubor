@@ -34,7 +34,7 @@ func (instance *Evaluate) CreateCliCommands() ([]cli.Command, error) {
 		Action:  instance.ExecuteFromCli,
 		Flags: []cli.Flag{
 			cli.BoolTFlag{
-				Name:        "sourceHint, sh",
+				Name:        "sourceHint",
 				Usage:       "Prints to the output a comment which indicates where the rendered content organically comes from.",
 				EnvVar:      "KUBOR_SOURCE_HINT",
 				Destination: &instance.SourceHint,
