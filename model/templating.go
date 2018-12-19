@@ -4,11 +4,9 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"io/ioutil"
-	"kubor/common"
+	"kubor/template/functions"
 	"path/filepath"
 	"strings"
-	"text/template"
 )
 
 type Templating struct {
@@ -48,11 +46,9 @@ func (instance Templating) RenderedTemplatesProvider(data interface{}) (ContentP
 }
 
 func (instance Templating) RenderTemplateFile(file string, data interface{}, writer io.Writer) error {
-	if content, err := ioutil.ReadFile(file); err != nil {
-		return fmt.Errorf("cannot read template file '%s': %v", file, err)
-	} else if tmpl, err := instance.newTemplate(file, string(content)); err != nil {
+	if tmpl, err := functions.GlobalTemplateFactory().NewFromFile(file); err != nil {
 		return fmt.Errorf("cannot parse template file '%s': %v", file, err)
-	} else if err := tmpl.Execute(writer, data); err != nil {
+	} else if err := tmpl.Execute(data, writer); err != nil {
 		return fmt.Errorf("cannot render template file '%s': %v", file, err)
 	} else {
 		return nil
@@ -67,25 +63,20 @@ func (instance Templating) renderFiles(patterns []string, name string, data inte
 			pattern = pattern[1:]
 			atLeastOneMatchExpected = false
 		}
-		buf := new(bytes.Buffer)
-		if tmpl, err := instance.newTemplate(pattern, pattern); err != nil {
+		if tmpl, err := functions.GlobalTemplateFactory().New(pattern, pattern); err != nil {
 			return nil, fmt.Errorf("cannot handle %s pattern '%s': %v", name, pattern, err)
-		} else if err := tmpl.Execute(buf, data); err != nil {
+		} else if rendered, err := tmpl.ExecuteToString(data); err != nil {
 			return nil, fmt.Errorf("cannot handle %s pattern: %v", name, err)
-		} else if buf.Len() == 0 {
+		} else if rendered == "" {
 			// Ignore ... could happen if we use {{ if  }} clauses
-		} else if matches, err := filepath.Glob(buf.String()); err != nil {
-			return nil, fmt.Errorf("cannot handle %s pattern '%s' => '%s': %v", name, pattern, buf.String(), err)
+		} else if matches, err := filepath.Glob(rendered); err != nil {
+			return nil, fmt.Errorf("cannot handle %s pattern '%s' => '%s': %v", name, pattern, rendered, err)
 		} else {
 			if len(matches) <= 0 && atLeastOneMatchExpected {
-				return nil, fmt.Errorf("there does not at least one %s file exist that matches '%s' => '%s'", name, pattern, buf.String())
+				return nil, fmt.Errorf("there does not at least one %s file exist that matches '%s' => '%s'", name, pattern, rendered)
 			}
 			result = append(result, matches...)
 		}
 	}
 	return result, nil
-}
-
-func (instance Templating) newTemplate(name string, plain string) (*template.Template, error) {
-	return common.NewTemplate(name, plain)
 }

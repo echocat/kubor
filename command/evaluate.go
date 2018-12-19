@@ -26,7 +26,10 @@ type Evaluate struct {
 	Predicate  common.EvaluatingPredicate
 }
 
-func (instance *Evaluate) CreateCliCommands() ([]cli.Command, error) {
+func (instance *Evaluate) CreateCliCommands(context string) ([]cli.Command, error) {
+	if context != "" {
+		return nil, nil
+	}
 	return []cli.Command{{
 		Name:    "evaluate",
 		Aliases: []string{"eval"},

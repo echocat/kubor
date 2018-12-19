@@ -43,7 +43,10 @@ type Apply struct {
 	DryRun    DryRunType
 }
 
-func (instance *Apply) CreateCliCommands() ([]cli.Command, error) {
+func (instance *Apply) CreateCliCommands(context string) ([]cli.Command, error) {
+	if context != "" {
+		return nil, nil
+	}
 	return []cli.Command{{
 		Name:   "apply",
 		Usage:  "Apply the instances of this project using the provided values.",

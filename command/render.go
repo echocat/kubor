@@ -30,7 +30,10 @@ type Render struct {
 	SourceHint   bool
 }
 
-func (instance *Render) CreateCliCommands() ([]cli.Command, error) {
+func (instance *Render) CreateCliCommands(context string) ([]cli.Command, error) {
+	if context != "" {
+		return nil, nil
+	}
 	return []cli.Command{{
 		Name:   "render",
 		Usage:  "Renders the instances of this project using the provided values.",

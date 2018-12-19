@@ -3,11 +3,11 @@ module kubor
 require (
 	github.com/Masterminds/semver v1.4.2 // indirect
 	github.com/Masterminds/sprig v2.16.0+incompatible
-	github.com/aokoli/goutils v1.0.1 // indirect
+	github.com/aokoli/goutils v1.0.1
 	github.com/gogo/protobuf v1.1.1 // indirect
 	github.com/google/gofuzz v0.0.0-20170612174753-24818f796faf // indirect
 	github.com/google/uuid v1.1.0 // indirect
-	github.com/huandu/xstrings v1.2.0 // indirect
+	github.com/huandu/xstrings v1.2.0
 	github.com/imdario/mergo v0.3.6
 	github.com/json-iterator/go v1.1.5 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect

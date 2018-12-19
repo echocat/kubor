@@ -16,7 +16,10 @@ func init() {
 
 type Contexts struct{}
 
-func (instance *Contexts) CreateCliCommands() ([]cli.Command, error) {
+func (instance *Contexts) CreateCliCommands(context string) ([]cli.Command, error) {
+	if context != "" {
+		return nil, nil
+	}
 	return []cli.Command{{
 		Name:  "contexts",
 		Usage: "List available contexts",

@@ -74,7 +74,7 @@ func main() {
 	app.Flags = append(app.Flags, log.DefaultLogger.Flags()...)
 	app.Flags = append(app.Flags, cli.HelpFlag)
 
-	app.Commands, err = common.CreateCliCommands()
+	app.Commands, err = common.CreateCliCommands("")
 	if err != nil {
 		panic(err)
 	}

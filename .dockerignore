@@ -1,0 +1,5 @@
+/.idea
+*.iml
+/go.sum
+/out
+/var

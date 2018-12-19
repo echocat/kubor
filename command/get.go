@@ -28,7 +28,10 @@ type Get struct {
 	SourceHint bool
 }
 
-func (instance *Get) CreateCliCommands() ([]cli.Command, error) {
+func (instance *Get) CreateCliCommands(context string) ([]cli.Command, error) {
+	if context != "" {
+		return nil, nil
+	}
 	return []cli.Command{{
 		Name:   "get",
 		Usage:  "Get the instances of this project using the provided values.",

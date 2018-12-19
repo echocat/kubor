@@ -18,7 +18,10 @@ type Values struct {
 	Command
 }
 
-func (instance *Values) CreateCliCommands() ([]cli.Command, error) {
+func (instance *Values) CreateCliCommands(context string) ([]cli.Command, error) {
+	if context != "" {
+		return nil, nil
+	}
 	return []cli.Command{{
 		Name:   "values",
 		Usage:  "Get the current project using the provided properties",
