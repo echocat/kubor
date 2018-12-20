@@ -9,6 +9,7 @@ import (
 	"kubor/template/functions"
 	"os"
 	"regexp"
+	"strings"
 )
 
 const (
@@ -58,7 +59,13 @@ func (instance *ShowTemplateFulltextTerm) Set(plain string) error {
 	if plain == "" {
 		(*instance).Regexp = nil
 		return nil
-	} else if r, err := regexp.Compile("(?i)" + plain); err != nil {
+
+	}
+	p := plain
+	if !strings.HasPrefix(p, "(?") {
+		p = "(?i)" + p
+	}
+	if r, err := regexp.Compile(p); err != nil {
 		return err
 	} else {
 		(*instance).Regexp = r
