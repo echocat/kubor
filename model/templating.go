@@ -46,7 +46,7 @@ func (instance Templating) RenderedTemplatesProvider(data interface{}) (ContentP
 }
 
 func (instance Templating) RenderTemplateFile(file string, data interface{}, writer io.Writer) error {
-	if tmpl, err := functions.GlobalTemplateFactory().NewFromFile(file); err != nil {
+	if tmpl, err := functions.DefaultTemplateFactory().NewFromFile(file); err != nil {
 		return fmt.Errorf("cannot parse template file '%s': %v", file, err)
 	} else if err := tmpl.Execute(data, writer); err != nil {
 		return fmt.Errorf("cannot render template file '%s': %v", file, err)
@@ -63,7 +63,7 @@ func (instance Templating) renderFiles(patterns []string, name string, data inte
 			pattern = pattern[1:]
 			atLeastOneMatchExpected = false
 		}
-		if tmpl, err := functions.GlobalTemplateFactory().New(pattern, pattern); err != nil {
+		if tmpl, err := functions.DefaultTemplateFactory().New(pattern, pattern); err != nil {
 			return nil, fmt.Errorf("cannot handle %s pattern '%s': %v", name, pattern, err)
 		} else if rendered, err := tmpl.ExecuteToString(data); err != nil {
 			return nil, fmt.Errorf("cannot handle %s pattern: %v", name, err)

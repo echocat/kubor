@@ -10,24 +10,23 @@ type FunctionProvider interface {
 }
 
 type Function interface {
-	GetName() string
 	Execute(context ExecutionContext, args ...interface{}) (interface{}, error)
 }
 
-type Functions []Function
+type Functions map[string]Function
 
 func (instance Functions) CreateFuncMap(context ExecutionContext) (nt.FuncMap, error) {
 	result := nt.FuncMap{}
-	for _, function := range instance {
-		result[function.GetName()] = instance.methodCaller(context, function)
+	for name, function := range instance {
+		result[name] = instance.methodCaller(context, function)
 	}
 	return result, nil
 }
 
 func (instance Functions) CreateDummyFuncMap() (nt.FuncMap, error) {
 	result := nt.FuncMap{}
-	for _, function := range instance {
-		result[function.GetName()] = instance.dummyMethod
+	for name := range instance {
+		result[name] = instance.dummyMethod
 	}
 	return result, nil
 }

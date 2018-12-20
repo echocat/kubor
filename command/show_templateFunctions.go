@@ -14,9 +14,9 @@ import (
 const (
 	showTemplateFunctionsTemplate = `List of available function within kubor rending context by category:
 
-{{range $category, $functions := .FunctionsByCategories -}}
-{{ $category | upper }}:{{range $i, $function := $functions}}
-  {{- "\n  {{ " -}}{{- $function.GetName -}}
+{{range $categoryName, $category := .Categories -}}
+{{ $categoryName | upper }}:{{range $functionName, $function := $category.Functions}}
+  {{- "\n  {{ " -}}{{- $functionName -}}
     {{- range $i, $parameter := $function.Parameters }}
        {{- if $parameter.VarArg }} [<{{ $parameter.GetName }}> ...]
        {{- else }} <{{ $parameter.GetName }}>{{ end -}}
@@ -50,6 +50,30 @@ func (instance ShowTemplateFunctionsOutput) String() string {
 	return string(instance)
 }
 
+type ShowTemplateFulltextTerm struct {
+	Regexp *regexp.Regexp
+}
+
+func (instance *ShowTemplateFulltextTerm) Set(plain string) error {
+	if plain == "" {
+		(*instance).Regexp = nil
+		return nil
+	} else if r, err := regexp.Compile("(?i)" + plain); err != nil {
+		return err
+	} else {
+		(*instance).Regexp = r
+		return nil
+	}
+}
+
+func (instance ShowTemplateFulltextTerm) String() string {
+	r := instance.Regexp
+	if r == nil {
+		return ""
+	}
+	return r.String()
+}
+
 func init() {
 	cmd := &ShowTemplateFunctions{
 		Output: ShowTemplateFunctionsOutput("text"),
@@ -58,7 +82,8 @@ func init() {
 }
 
 type ShowTemplateFunctions struct {
-	Output ShowTemplateFunctionsOutput
+	Output             ShowTemplateFunctionsOutput
+	FulltextSearchTerm ShowTemplateFulltextTerm
 }
 
 func (instance *ShowTemplateFunctions) CreateCliCommands(context string) ([]cli.Command, error) {
@@ -76,12 +101,16 @@ func (instance *ShowTemplateFunctions) CreateCliCommands(context string) ([]cli.
 				Name:  "output, o",
 				Usage: "Specifies how to render the output.",
 				Value: &instance.Output,
+			}, cli.GenericFlag{
+				Name:  "fulltextSearch, fulltext, s",
+				Usage: "Specifies a term that needs to be matched in any property of a function (name, description, ...)",
+				Value: &instance.FulltextSearchTerm,
 			},
 		},
 	}}, nil
 }
 
-func (instance *ShowTemplateFunctions) createPredicate(c *cli.Context) (func(functions.Function) bool, error) {
+func (instance *ShowTemplateFunctions) createPredicate(c *cli.Context) (func(name string) bool, error) {
 	regexps := make([]*regexp.Regexp, c.NArg())
 	for i, pattern := range c.Args() {
 		if r, err := regexp.Compile(pattern); err != nil {
@@ -91,13 +120,13 @@ func (instance *ShowTemplateFunctions) createPredicate(c *cli.Context) (func(fun
 		}
 	}
 	if len(regexps) <= 0 {
-		return func(functions.Function) bool {
+		return func(name string) bool {
 			return true
 		}, nil
 	}
-	return func(in functions.Function) bool {
+	return func(name string) bool {
 		for _, r := range regexps {
-			if r.MatchString(in.GetName()) {
+			if r.MatchString(name) {
 				return true
 			}
 		}
@@ -105,14 +134,32 @@ func (instance *ShowTemplateFunctions) createPredicate(c *cli.Context) (func(fun
 	}, nil
 }
 
+func (instance *ShowTemplateFunctions) createFulltextPredicate(c *cli.Context) func(functionName string, function functions.Function) bool {
+	term := instance.FulltextSearchTerm.Regexp
+	if term == nil {
+		return func(functionName string, function functions.Function) bool {
+			return true
+		}
+	}
+	return func(functionName string, function functions.Function) bool {
+		if term.FindStringIndex(functionName) != nil {
+			return true
+		}
+		if function.MatchesFulltextSearch(term) {
+			return true
+		}
+		return false
+	}
+}
+
 func (instance *ShowTemplateFunctions) ExecuteFromCli(c *cli.Context) error {
-	predicate, err := instance.createPredicate(c)
+	namePredicate, err := instance.createPredicate(c)
 	if err != nil {
 		return err
 	}
-	all := functions.GlobalRegistry().GetAll()
+	fulltextPredicate := instance.createFulltextPredicate(c)
 
-	context := instance.newShowTemplateFunctionsContext(all, predicate)
+	context := instance.newShowTemplateFunctionsContext(namePredicate, fulltextPredicate, functions.CategoriesDefault)
 
 	switch instance.Output {
 	case ShowTemplateFunctionsOutput("yaml"):
@@ -124,54 +171,41 @@ func (instance *ShowTemplateFunctions) ExecuteFromCli(c *cli.Context) error {
 	}
 }
 
-func (instance *ShowTemplateFunctions) newShowTemplateFunctionsContext(in []functions.Function, predicate func(functions.Function) bool) showTemplateFunctionsContext {
-	functionsByCategories := map[string][]functions.Function{}
-	var lengthOfLongestName int
-	var lengthOfLongestCategory int
-	for _, function := range in {
-		if predicate(function) {
-			name := function.GetName()
-			category := function.GetCategory()
-			if lengthOfLongestName < len(name) {
-				lengthOfLongestName = len(name)
-			}
-			if lengthOfLongestCategory < len(category) {
-				lengthOfLongestCategory = len(category)
-			}
-
-			if existing, ok := functionsByCategories[category]; ok {
-				functionsByCategories[category] = append(existing, function)
-			} else {
-				functionsByCategories[category] = []functions.Function{function}
+func (instance *ShowTemplateFunctions) newShowTemplateFunctionsContext(
+	namePredicate func(name string) bool,
+	fulltextPredicate func(functionName string, function functions.Function) bool,
+	categories functions.Categories,
+) showTemplateFunctionsContext {
+	targetCategories := functions.Categories{}
+	for categoryName, category := range categories {
+		for functionName, function := range category.Functions {
+			if namePredicate(functionName) && fulltextPredicate(functionName, function) {
+				targetCategories = targetCategories.WithFunction(categoryName, functionName, function)
 			}
 		}
 	}
 	return showTemplateFunctionsContext{
-		FunctionsByCategories:   functionsByCategories,
-		LengthOfLongestName:     lengthOfLongestName,
-		LengthOfLongestCategory: lengthOfLongestCategory,
+		Categories: targetCategories,
 	}
 }
 
 type showTemplateFunctionsContext struct {
-	FunctionsByCategories   map[string][]functions.Function
-	LengthOfLongestName     int
-	LengthOfLongestCategory int
+	Categories functions.Categories
 }
 
 func (instance showTemplateFunctionsContext) renderYaml() error {
 	enc := yaml.NewEncoder(os.Stdout)
-	return enc.Encode(instance.FunctionsByCategories)
+	return enc.Encode(instance.Categories)
 }
 
 func (instance showTemplateFunctionsContext) renderJson() error {
 	enc := json.NewEncoder(os.Stdout)
 	enc.SetIndent("", "  ")
-	return enc.Encode(instance.FunctionsByCategories)
+	return enc.Encode(instance.Categories)
 }
 
 func (instance showTemplateFunctionsContext) renderText() error {
-	if tmpl, err := functions.GlobalTemplateFactory().New(
+	if tmpl, err := functions.DefaultTemplateFactory().New(
 		"show_templateFunctions.go",
 		showTemplateFunctionsTemplate,
 	); err != nil {

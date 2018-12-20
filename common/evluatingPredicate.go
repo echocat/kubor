@@ -142,7 +142,7 @@ func ParseEvaluatingPartMatcher(plain string) (EvaluatingPartMatcher, error) {
 }
 
 func NewEvaluatingPartMatcher(valueTemplate string, check string) (EvaluatingPartMatcher, error) {
-	if tmpl, err := functions.GlobalTemplateFactory().New("", valueTemplate); err != nil {
+	if tmpl, err := functions.DefaultTemplateFactory().New("", valueTemplate); err != nil {
 		return EvaluatingPartMatcher{}, err
 	} else if checkInstance, err := regexp.Compile(check); err != nil {
 		return EvaluatingPartMatcher{}, err

@@ -7,7 +7,6 @@ import (
 )
 
 type Template interface {
-	WithSourceName(sourceName string) (Template, error)
 	WithSourceFile(sourceFile string) (Template, error)
 
 	Execute(data interface{}, target io.Writer) error
@@ -41,21 +40,6 @@ type Impl struct {
 	factory          Factory
 	functionProvider FunctionProvider
 	delegate         *nt.Template
-}
-
-func (instance *Impl) WithSourceName(sourceName string) (Template, error) {
-	if nd, err := newDelegate(sourceName, instance.sourceCode, instance.functionProvider); err != nil {
-		return nil, err
-	} else {
-		return &Impl{
-			sourceName:       sourceName,
-			sourceFile:       instance.sourceFile,
-			sourceCode:       instance.sourceCode,
-			functionProvider: instance.functionProvider,
-			factory:          instance.factory,
-			delegate:         nd,
-		}, nil
-	}
 }
 
 func (instance *Impl) WithSourceFile(sourceFile string) (Template, error) {

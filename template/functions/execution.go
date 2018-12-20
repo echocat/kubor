@@ -7,7 +7,7 @@ import (
 )
 
 func (instance Function) Execute(context template.ExecutionContext, args ...interface{}) (interface{}, error) {
-	fv := reflect.ValueOf(instance.Func)
+	fv := reflect.ValueOf(instance.f)
 	ft := fv.Type()
 
 	if pvs, err := instance.createExecutionArguments(ft, context, args...); err != nil {
@@ -54,7 +54,7 @@ func (instance Function) createExecutionArguments(ft reflect.Type, context templ
 	}
 
 	if len(args) != numberOfParameters {
-		return []reflect.Value{}, fmt.Errorf("wrong number of args for %s: want %d got %d", instance.Name, numberOfParameters, len(args))
+		return []reflect.Value{}, fmt.Errorf("wrong number of args: want %d got %d", numberOfParameters, len(args))
 	}
 
 	var argIndex int
@@ -77,7 +77,7 @@ func (instance Function) createExecutionArgument(index int, ft reflect.Type, pt 
 	av := reflect.ValueOf(arg)
 	at := av.Type()
 	if !at.AssignableTo(pt) {
-		return reflect.Value{}, fmt.Errorf("%v is not assignable to %v for argument #%d of %s", at, pt, index, instance.Name)
+		return reflect.Value{}, fmt.Errorf("%v is not assignable to %v for argument #%d", at, pt, index)
 	}
 	return av, nil
 }

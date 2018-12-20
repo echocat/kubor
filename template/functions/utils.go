@@ -13,8 +13,8 @@ func NormalizeType(t reflect.Type) string {
 	return result
 }
 
-func GlobalTemplateFactory() template.Factory {
+func DefaultTemplateFactory() template.Factory {
 	return &template.FactoryImpl{
-		FunctionProvider: GlobalRegistry(),
+		FunctionProvider: CategoriesDefault,
 	}
 }
