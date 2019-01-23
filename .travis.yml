@@ -10,6 +10,8 @@ env:
   global:
     - GO111MODULE=on
     - CGO_ENABLED=0
+    - GOOS=linux
+    - GOARCH=amd64
 cache:
   directories:
     - $HOME/.cache/go-build
@@ -21,44 +23,14 @@ jobs:
     - stage: test
       name: Run Tests
       script:
-        - go test -v ./...
-
-        - export LDFLAGS="-X main.extVersion=TEST${TRAVIS_BRANCH}TEST -X main.extRevision=TEST${TRAVIS_COMMIT}TEST -X main.extCompiled=`date -u +%Y-%m-%dT%H:%M:%SZ`"
-        - GOOS=linux GOARCH=amd64 go build -ldflags "$LDFLAGS" -o dist/kubor-linux-amd64 ./main
-        - dist/kubor-linux-amd64 version
-
-        - docker build -f Dockerfile -t        levertonai/kubor:alpine-$TRAVIS_BRANCH .
-        - sh .docker/test-image.sh             levertonai/kubor:alpine-$TRAVIS_BRANCH
-
-        - docker build -f Dockerfile.ubuntu -t levertonai/kubor:ubuntu-$TRAVIS_BRANCH .
-        - sh .docker/test-image.sh             levertonai/kubor:ubuntu-$TRAVIS_BRANCH
+        - go run ./build test
     - stage: release
       name: Release
       if: tag =~ ^v\d+\.\d+\.\d+|snapshot-.+$
       before_script:
-        - mkdir -p dist
         - echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
       script:
-        - export LDFLAGS="-X main.extVersion=$TRAVIS_BRANCH -X main.extRevision=$TRAVIS_COMMIT -X main.extCompiled=`date -u +%Y-%m-%dT%H:%M:%SZ`"
-        - GOOS=linux   GOARCH=amd64 go build -ldflags "$LDFLAGS" -o dist/kubor-linux-amd64       ./main
-        - GOOS=linux   GOARCH=386   go build -ldflags "$LDFLAGS" -o dist/kubor-linux-386         ./main
-        - GOOS=darwin  GOARCH=amd64 go build -ldflags "$LDFLAGS" -o dist/kubor-darwin-amd64      ./main
-        - GOOS=darwin  GOARCH=386   go build -ldflags "$LDFLAGS" -o dist/kubor-darwin-386        ./main
-        - GOOS=windows GOARCH=amd64 go build -ldflags "$LDFLAGS" -o dist/kubor-windows-amd64.exe ./main
-        - GOOS=windows GOARCH=386   go build -ldflags "$LDFLAGS" -o dist/kubor-windows-386.exe   ./main
-
-        - docker build -t levertonai/kubor:alpine-$TRAVIS_BRANCH .
-        - docker build -t levertonai/kubor:ubuntu-$TRAVIS_BRANCH .
-        - docker tag levertonai/kubor:alpine-$TRAVIS_BRANCH levertonai/kubor:latest
-        - docker tag levertonai/kubor:alpine-$TRAVIS_BRANCH levertonai/kubor:$TRAVIS_BRANCH
-        - docker tag levertonai/kubor:alpine-$TRAVIS_BRANCH levertonai/kubor:alpine
-        - docker tag levertonai/kubor:ubuntu-$TRAVIS_BRANCH levertonai/kubor:ubuntu
-        - docker push levertonai/kubor:latest
-        - docker push levertonai/kubor:$TRAVIS_BRANCH
-        - docker push levertonai/kubor:alpine-$TRAVIS_BRANCH
-        - docker push levertonai/kubor:alpine
-        - docker push levertonai/kubor:ubuntu-$TRAVIS_BRANCH
-        - docker push levertonai/kubor:ubuntu
+        - go run ./build build-and-deploy
       deploy:
         provider: releases
         api_key: "$GITHUB_DEPLOY_TOKEN"
