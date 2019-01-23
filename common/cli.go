@@ -1,11 +1,19 @@
 package common
 
 import (
-	"github.com/urfave/cli"
+	"github.com/alecthomas/kingpin"
 )
 
+type HasFlags interface {
+	Flag(name, help string) *kingpin.FlagClause
+}
+
+type HasCommands interface {
+	Command(name, help string) *kingpin.CmdClause
+}
+
 type CliFactory interface {
-	CreateCliCommands() ([]cli.Command, error)
+	ConfigureCliCommands(HasCommands) error
 }
 
 var (
@@ -17,13 +25,11 @@ func RegisterCliFactory(cliFactory CliFactory) CliFactory {
 	return cliFactory
 }
 
-func CreateCliCommands() (result []cli.Command, err error) {
+func ConfigureCliCommands(hc HasCommands) (err error) {
 	for _, cliFactory := range cliFactories {
-		if cc, err := cliFactory.CreateCliCommands(); err != nil {
-			return nil, err
-		} else {
-			result = append(result, cc...)
+		if err := cliFactory.ConfigureCliCommands(hc); err != nil {
+			return err
 		}
 	}
-	return result, nil
+	return nil
 }

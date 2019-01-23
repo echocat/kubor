@@ -18,7 +18,6 @@ require (
 	github.com/onsi/gomega v1.4.2
 	github.com/sirupsen/logrus v1.2.0
 	github.com/spf13/pflag v1.0.3 // indirect
-	github.com/urfave/cli v1.20.0+incompatible
 	golang.org/x/crypto v0.0.0-20181112202954-3d3f9f413869 // indirect
 	golang.org/x/net v0.0.0-20181114220301-adae6a3d119a // indirect
 	golang.org/x/oauth2 v0.0.0-20181120190819-8f65e3013eba // indirect

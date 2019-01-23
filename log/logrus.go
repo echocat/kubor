@@ -3,7 +3,6 @@ package log
 import (
 	"fmt"
 	"github.com/sirupsen/logrus"
-	"github.com/urfave/cli"
 )
 
 type LogrusLevel struct {
@@ -125,33 +124,23 @@ func (instance *LogrusLogger) IsFatalEnabled() bool {
 	return instance.Delegate.Level >= logrus.FatalLevel
 }
 
-func (instance *LogrusLogger) Flags() []cli.Flag {
-	return []cli.Flag{
-		cli.GenericFlag{
-			Name:   "logLevel",
-			Usage:  "Specifies the minimum required log level.",
-			EnvVar: "KUBOR_LOG_LEVEL",
-			Value:  &instance.Level,
-		},
-		cli.GenericFlag{
-			Name:   "logFormat",
-			Usage:  "Specifies format output (text or json).",
-			EnvVar: "KUBOR_LOG_FORMAT",
-			Value:  &instance.Format,
-		},
-		cli.GenericFlag{
-			Name:   "logColorMode",
-			Usage:  "Specifies if the output is in colors or not (auto, never or always).",
-			EnvVar: "KUBOR_LOG_COLOR_MODE",
-			Value:  &instance.ColorMode,
-		},
-		cli.BoolFlag{
-			Name:        "logCaller",
-			Usage:       "If true the caller details will be logged too.",
-			EnvVar:      "KUBOR_LOG_CALLER",
-			Destination: &instance.ReportCaller,
-		},
-	}
+func (instance *LogrusLogger) ConfigureFlags(hf HasFlags) {
+	hf.Flag("logLevel", "Specifies the minimum required log level.").
+		Envar("KUBOR_LOG_LEVEL").
+		Default(instance.Level.String()).
+		SetValue(&instance.Level)
+	hf.Flag("logFormat", "Specifies format output (text or json).").
+		Envar("KUBOR_LOG_FORMAT").
+		Default(instance.Format.String()).
+		SetValue(&instance.Format)
+	hf.Flag("logColorMode", "Specifies if the output is in colors or not (auto, never or always).").
+		Envar("KUBOR_LOG_COLOR_MODE").
+		Default(instance.ColorMode.String()).
+		SetValue(&instance.ColorMode)
+	hf.Flag("logCaller", "If true the caller details will be logged too.").
+		Envar("KUBOR_LOG_CALLER").
+		Default("false").
+		BoolVar(&instance.ReportCaller)
 }
 
 func (instance *LogrusLogger) Init() error {

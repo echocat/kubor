@@ -3,11 +3,11 @@ package kubernetes
 import (
 	"fmt"
 	"github.com/imdario/mergo"
-	"github.com/urfave/cli"
 	restclient "k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 	"k8s.io/client-go/util/homedir"
+	"kubor/common"
 	"kubor/log"
 	"os"
 	"path/filepath"
@@ -20,26 +20,22 @@ var (
 		}
 		return ""
 	}()
-	kubeConfigPath  string
-	kubeContext     string
-	KubeConfigFlags = []cli.Flag{
-		&cli.StringFlag{
-			Name: "kubeconfig",
-			Usage: "Path to the kubeconfig file. Optionally you can provide the content of the kubeconfig using\n" +
-				"\tenvironment variable KUBE_CONFIG.",
-			Value:       "",
-			EnvVar:      "KUBOR_KUBECONFIG",
-			Destination: &kubeConfigPath,
-		},
-		&cli.StringFlag{
-			Name:        "context, c",
-			Usage:       "Context of the kubeconfig which is used for the actual execution.",
-			Value:       "",
-			EnvVar:      "KUBOR_CONTEXT",
-			Destination: &kubeContext,
-		},
-	}
+	kubeConfigPath string
+	kubeContext    string
 )
+
+func ConfigureKubeConfigFlags(hf common.HasFlags) {
+	hf.Flag("kubeconfig", "Path to the kubeconfig file. Optionally you can provide the content of the kubeconfig using"+
+		" environment variable KUBE_CONFIG.").
+		Envar("KUBOR_KUBECONFIG").
+		PlaceHolder("<kube config file>").
+		StringVar(&kubeConfigPath)
+	hf.Flag("context", "Context of the kubeconfig which is used for the actual execution.").
+		Short('c').
+		Envar("KUBOR_CONTEXT").
+		PlaceHolder("<context>").
+		StringVar(&kubeContext)
+}
 
 func NewKubeConfig() (*restclient.Config, string, error) {
 	clientConfig, contextName, err := NewKubeClientConfig()

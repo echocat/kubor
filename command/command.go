@@ -2,7 +2,7 @@ package command
 
 import (
 	"fmt"
-	"github.com/urfave/cli"
+	"github.com/alecthomas/kingpin"
 	"k8s.io/client-go/dynamic"
 	restclient "k8s.io/client-go/rest"
 	"kubor/kubernetes"
@@ -36,7 +36,7 @@ func (instance *Command) createProject(contextName string) (model.Project, error
 	return instance.ProjectFactory.Create(contextName)
 }
 
-func (instance *Command) ExecuteFromCli(*cli.Context) error {
+func (instance *Command) ExecuteFromCli(*kingpin.ParseContext) error {
 	return instance.Run()
 }
 

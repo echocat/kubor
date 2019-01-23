@@ -23,6 +23,10 @@ func (instance Values) MergeWith(input ...Values) Values {
 	return result
 }
 
+func (instance *Values) IsCumulative() bool {
+	return true
+}
+
 func (instance *Values) Set(value string) error {
 	parts := strings.SplitN(value, "=", 2)
 	if *instance == nil {

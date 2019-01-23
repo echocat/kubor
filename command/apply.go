@@ -2,7 +2,6 @@ package command
 
 import (
 	"fmt"
-	"github.com/urfave/cli"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/dynamic"
@@ -43,38 +42,32 @@ type Apply struct {
 	DryRun    DryRunType
 }
 
-func (instance *Apply) CreateCliCommands() ([]cli.Command, error) {
-	return []cli.Command{{
-		Name:   "apply",
-		Usage:  "Apply the instances of this project using the provided values.",
-		Action: instance.ExecuteFromCli,
-		Flags: []cli.Flag{
-			cli.DurationFlag{
-				Name: "wait, w",
-				Usage: "If set to value larger than 0 it will wait for this amount of time for successful\n" +
-					"\trunning environment which was deployed. If it fails it will try to rollback.",
-				EnvVar:      "KUBOR_WAIT",
-				Value:       time.Minute * 5,
-				Destination: &instance.Wait,
-			},
-			cli.GenericFlag{
-				Name: "predicate, p",
-				Usage: "Filters every object that should be listed. Empty allows everything.\n" +
-					"\tPattern: \"[!]<template>=<must match regex>\", Example: \"{{.spec.name}}=Foo.*\"",
-				EnvVar: "KUBOR_PREDICATE",
-				Value:  &instance.Predicate,
-			},
-			cli.GenericFlag{
-				Name: "dryRun",
-				Usage: "If set to 'before' it will execute a dry run before the actual apply.\n" +
-					"\tThis is perfect in cases where the first parts of the apply configuration works and\n" +
-					"\tthe following stuff is broken. If set to 'never' apply will be executed without dry run.\n" +
-					"\tOn 'only' it will only run the dry run but not the apply.",
-				EnvVar: "KUBOR_DRY_RUN",
-				Value:  &instance.DryRun,
-			},
-		},
-	}}, nil
+func (instance *Apply) ConfigureCliCommands(hc common.HasCommands) error {
+	cmd := hc.Command("apply", "Apply the instances of this project using the provided values.").
+		Action(instance.ExecuteFromCli)
+
+	cmd.Flag("wait", "If set to value larger than 0 it will wait for this amount of time for successful"+
+		" running environment which was deployed. If it fails it will try to rollback.").
+		Short('w').
+		Envar("KUBOR_WAIT").
+		Default((time.Minute * 5).String()).
+		DurationVar(&instance.Wait)
+	cmd.Flag("predicate", "Filters every object that should be listed. Empty allows everything."+
+		" Example: \"{{.spec.name}}=Foo.*\"").
+		PlaceHolder("[!]<template>=<must match regex>").
+		Short('p').
+		Envar("KUBOR_PREDICATE").
+		Default(instance.Predicate.String()).
+		SetValue(&instance.Predicate)
+	cmd.Flag("dryRun", "If set to 'before' it will execute a dry run before the actual apply."+
+		" This is perfect in cases where the first parts of the apply configuration works and"+
+		" the following stuff is broken. If set to 'never' apply will be executed without dry run."+
+		" On 'only' it will only run the dry run but not the apply.").
+		Envar("KUBOR_DRY_RUN").
+		Default(instance.DryRun.String()).
+		SetValue(&instance.DryRun)
+
+	return nil
 }
 
 func (instance *Apply) RunWithArguments(arguments CommandArguments) error {

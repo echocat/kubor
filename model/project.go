@@ -2,7 +2,6 @@ package model
 
 import (
 	"fmt"
-	"github.com/urfave/cli"
 	"gopkg.in/yaml.v2"
 	"io"
 	"kubor/common"
@@ -171,43 +170,30 @@ func (instance *ProjectFactory) populateStage2(input Project) (Project, error) {
 	return result, nil
 }
 
-func (instance *ProjectFactory) Flags() []cli.Flag {
-	return []cli.Flag{
-		&cli.StringFlag{
-			Name:        "source",
-			Usage:       "Specifies the location of the kubor source file.",
-			Value:       ".kubor.yaml",
-			EnvVar:      "KUBOR_SOURCE",
-			Destination: &instance.source,
-		},
-		&cli.StringFlag{
-			Name:        "groupId",
-			Usage:       "If set it will overrides groupId from source file.",
-			EnvVar:      "KUBOR_GROUP_ID",
-			Destination: &instance.groupId,
-		},
-		&cli.StringFlag{
-			Name:        "artifactId",
-			Usage:       "If set it will overrides artifactId from source file.",
-			EnvVar:      "KUBOR_ARTIFACT_ID",
-			Destination: &instance.artifactId,
-		},
-		&cli.StringFlag{
-			Name:        "release",
-			Usage:       "If set it will overrides release from source file.",
-			EnvVar:      "KUBOR_RELEASE",
-			Destination: &instance.release,
-		},
-		&cli.BoolTFlag{
-			Name:        "sourceRequired",
-			Usage:       "If set to true the source file has to exist if not the execution will fail.",
-			EnvVar:      "KUBOR_SOURCE_REQUIRED",
-			Destination: &instance.sourceRequired,
-		},
-		&cli.GenericFlag{
-			Name:  "value, v",
-			Usage: "Specifies values which should be provided to the runtime. Format <name>=[<value>].",
-			Value: &instance.values,
-		},
-	}
+func (instance *ProjectFactory) ConfigureFlags(hf common.HasFlags) {
+	hf.Flag("source", "Specifies the location of the kubor source file.").
+		Default(".kubor.yaml").
+		Envar("KUBOR_SOURCE").
+		PlaceHolder("<source file>").
+		StringVar(&instance.source)
+	hf.Flag("groupId", "If set it will overrides groupId from source file.").
+		Envar("KUBOR_GROUP_ID").
+		PlaceHolder("<groupId>").
+		StringVar(&instance.groupId)
+	hf.Flag("artifactId", "If set it will overrides artifactId from source file.").
+		Envar("KUBOR_ARTIFACT_ID").
+		PlaceHolder("<artifactId>").
+		StringVar(&instance.artifactId)
+	hf.Flag("release", "If set it will overrides release from source file.").
+		Envar("KUBOR_RELEASE").
+		PlaceHolder("<release>").
+		StringVar(&instance.release)
+	hf.Flag("sourceRequired", "If set to true the source file has to exist if not the execution will fail.").
+		Default(fmt.Sprint(instance.sourceRequired)).
+		Envar("KUBOR_SOURCE_REQUIRED").
+		BoolVar(&instance.sourceRequired)
+	hf.Flag("value", "Specifies values which should be provided to the runtime.").
+		Short('v').
+		PlaceHolder("<name>=[<value>]").
+		SetValue(&instance.values)
 }

@@ -1,7 +1,7 @@
 package command
 
 import (
-	"github.com/urfave/cli"
+	"github.com/alecthomas/kingpin"
 	"gopkg.in/yaml.v2"
 	"kubor/common"
 	"os"
@@ -18,12 +18,12 @@ type Values struct {
 	Command
 }
 
-func (instance *Values) CreateCliCommands() ([]cli.Command, error) {
-	return []cli.Command{{
-		Name:   "values",
-		Usage:  "Get the current project using the provided properties",
-		Action: instance.ExecuteFromCli,
-	}}, nil
+func (instance *Values) ConfigureCliCommands(hc common.HasCommands) error {
+	hc.Command("values", "Get the aggregated values used by the project based on the given parameters.").
+		Action(func(context *kingpin.ParseContext) error {
+			return instance.Run()
+		})
+	return nil
 }
 
 func (instance *Values) RunWithArguments(arguments CommandArguments) error {
