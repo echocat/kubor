@@ -138,7 +138,10 @@ func (instance *ProjectFactory) populateStage1(input Project) (Project, error) {
 	result := input
 	result.Source = instance.source
 	result.Root = filepath.Dir(result.Source)
-	result.Values = instance.values
+	result.Values = Values{}
+	for k, v := range instance.values {
+		result.Values[k] = v
+	}
 	if instance.groupId != "" {
 		result.GroupId = instance.groupId
 	}
@@ -162,6 +165,7 @@ func (instance *ProjectFactory) populateStage2(input Project) (Project, error) {
 			return Project{}, err
 		} else if ok {
 			result.Values = result.Values.MergeWith(candidate.Values)
+			result.Values = result.Values.MergeWith(instance.values)
 		}
 	}
 	return result, nil

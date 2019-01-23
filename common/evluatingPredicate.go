@@ -144,7 +144,7 @@ func ParseEvaluatingPartMatcher(plain string) (EvaluatingPartMatcher, error) {
 func NewEvaluatingPartMatcher(valueTemplate string, check string) (EvaluatingPartMatcher, error) {
 	if valueTemplateInstance, err := NewTemplate("", valueTemplate); err != nil {
 		return EvaluatingPartMatcher{}, err
-	} else if checkInstance, err := regexp.Compile(check); err != nil {
+	} else if checkInstance, err := regexp.Compile(fmt.Sprintf("^%s$", check)); err != nil {
 		return EvaluatingPartMatcher{}, err
 	} else {
 		return EvaluatingPartMatcher{
