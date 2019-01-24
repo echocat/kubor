@@ -1,7 +1,7 @@
 package command
 
 import (
-	"github.com/urfave/cli"
+	"github.com/alecthomas/kingpin"
 	"gopkg.in/yaml.v2"
 	"k8s.io/client-go/tools/clientcmd"
 	"kubor/common"
@@ -16,17 +16,15 @@ func init() {
 
 type Contexts struct{}
 
-func (instance *Contexts) CreateCliCommands(context string) ([]cli.Command, error) {
+func (instance *Contexts) ConfigureCliCommands(context string, hc common.HasCommands) error {
 	if context != "" {
-		return nil, nil
+		return nil
 	}
-	return []cli.Command{{
-		Name:  "contexts",
-		Usage: "List available contexts",
-		Action: func(*cli.Context) error {
+	hc.Command("contexts", "List available contexts").
+		Action(func(context *kingpin.ParseContext) error {
 			return instance.Run()
-		},
-	}}, nil
+		})
+	return nil
 }
 
 func (instance *Contexts) Run() error {

@@ -2,7 +2,6 @@ package command
 
 import (
 	"fmt"
-	"github.com/urfave/cli"
 	"io"
 	"kubor/common"
 	"os"
@@ -30,34 +29,30 @@ type Render struct {
 	SourceHint   bool
 }
 
-func (instance *Render) CreateCliCommands(context string) ([]cli.Command, error) {
+func (instance *Render) ConfigureCliCommands(context string, hc common.HasCommands) error {
 	if context != "" {
-		return nil, nil
+		return nil
 	}
-	return []cli.Command{{
-		Name:   "render",
-		Usage:  "Renders the instances of this project using the provided values.",
-		Action: instance.ExecuteFromCli,
-		Flags: []cli.Flag{
-			cli.StringFlag{
-				Name: "file, f",
-				Usage: "If specified this file will be used as template and rendered with the current kubor environment\n" +
-					"\tand printed to stdout. If empty all project template files will be used.",
-				EnvVar:      "KUBOR_TEMPLATE_FILE",
-				Destination: &instance.TemplateFile,
-			},
-			cli.BoolTFlag{
-				Name: "sourceHint",
-				Usage: "Prints to the output a comment which indicates where the rendered content organically\n" +
-					"\tcomes from. This will be ignored if --file is used.",
-				EnvVar:      "KUBOR_SOURCE_HINT",
-				Destination: &instance.SourceHint,
-			},
-		},
-	}}, nil
+
+	cmd := hc.Command("render", "Renders the instances of this project using the provided values.").
+		Action(instance.ExecuteFromCli)
+
+	cmd.Flag("file", "If specified this file will be used as template and rendered with the current kubor environment"+
+		" and printed to stdout. If empty all project template files will be used.").
+		Short('f').
+		PlaceHolder("<file>").
+		Envar("KUBOR_TEMPLATE_FILE").
+		Default(instance.TemplateFile).
+		StringVar(&instance.TemplateFile)
+	cmd.Flag("sourceHint", "Prints to the output a comment which indicates where the rendered content organically comes from.").
+		Envar("KUBOR_SOURCE_HINT").
+		Default(fmt.Sprint(instance.SourceHint)).
+		BoolVar(&instance.SourceHint)
+
+	return nil
 }
 
-func (instance *Render) RunWithArguments(arguments CommandArguments) error {
+func (instance *Render) RunWithArguments(arguments Arguments) error {
 	if instance.TemplateFile != "" {
 		return arguments.Project.RenderedTemplateFile(instance.TemplateFile, os.Stdout)
 	}

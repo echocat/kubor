@@ -2,7 +2,6 @@ package command
 
 import (
 	"fmt"
-	"github.com/urfave/cli"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer/json"
@@ -28,32 +27,27 @@ type Get struct {
 	SourceHint bool
 }
 
-func (instance *Get) CreateCliCommands(context string) ([]cli.Command, error) {
+func (instance *Get) ConfigureCliCommands(context string, hc common.HasCommands) error {
 	if context != "" {
-		return nil, nil
+		return nil
 	}
-	return []cli.Command{{
-		Name:   "get",
-		Usage:  "Get the instances of this project using the provided values.",
-		Action: instance.ExecuteFromCli,
-		Flags: []cli.Flag{
-			cli.BoolTFlag{
-				Name:        "sourceHint",
-				Usage:       "Prints to the output a comment which indicates where the rendered content organically comes from.",
-				EnvVar:      "KUBOR_SOURCE_HINT",
-				Destination: &instance.SourceHint,
-			},
-			cli.GenericFlag{
-				Name:   "predicate, p",
-				Usage:  "Filters every object that should be listed. Empty allows everything. Pattern: \"[!]<template>=<must match regex>\", Example: \"{{.spec.name}}=Foo.*\"",
-				EnvVar: "KUBOR_PREDICATE",
-				Value:  &instance.Predicate,
-			},
-		},
-	}}, nil
+
+	cmd := hc.Command("get", "Get the instances of this project using the provided values.").
+		Action(instance.ExecuteFromCli)
+
+	cmd.Flag("sourceHint", "Prints to the output a comment which indicates where the rendered content organically comes from.").
+		Envar("KUBOR_SOURCE_HINT").
+		Default(fmt.Sprint(instance.SourceHint)).
+		BoolVar(&instance.SourceHint)
+	cmd.Flag("predicate", "Filters every object that should be listed. Empty allows everything. Pattern: \"[!]<template>=<must match regex>\", Example: \"{{.spec.name}}=Foo.*\"").
+		Short('p').
+		Envar("KUBOR_PREDICATE").
+		SetValue(&instance.Predicate)
+
+	return nil
 }
 
-func (instance *Get) RunWithArguments(arguments CommandArguments) error {
+func (instance *Get) RunWithArguments(arguments Arguments) error {
 	task := &getTask{
 		source:        instance,
 		dynamicClient: arguments.DynamicClient,

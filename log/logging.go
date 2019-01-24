@@ -3,8 +3,8 @@ package log
 import (
 	"bytes"
 	"encoding/json"
+	"github.com/alecthomas/kingpin"
 	"github.com/sirupsen/logrus"
-	"github.com/urfave/cli"
 )
 
 var DefaultLogger RootLogger = &LogrusLogger{
@@ -35,11 +35,15 @@ type Logger interface {
 	IsFatalEnabled() bool
 }
 
+type HasFlags interface {
+	Flag(name, help string) *kingpin.FlagClause
+}
+
 type RootLogger interface {
 	Logger
 
 	Init() error
-	Flags() []cli.Flag
+	ConfigureFlags(HasFlags)
 }
 
 func WithField(key string, value interface{}) Logger {

@@ -2,7 +2,6 @@ package command
 
 import (
 	"fmt"
-	"github.com/urfave/cli"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/dynamic"
@@ -28,7 +27,8 @@ func (instance DryRunType) String() string {
 
 func init() {
 	cmd := &Apply{
-		DryRun: DryRunType("before"),
+		DryRun:   DryRunType("before"),
+		DryRunOn: kubernetes.ServerIfPossibleDryRun,
 	}
 	cmd.Parent = cmd
 	RegisterInitializable(cmd)
@@ -41,49 +41,53 @@ type Apply struct {
 	Wait      time.Duration
 	Predicate common.EvaluatingPredicate
 	DryRun    DryRunType
+	DryRunOn  kubernetes.DryRunOn
 }
 
-func (instance *Apply) CreateCliCommands(context string) ([]cli.Command, error) {
+func (instance *Apply) ConfigureCliCommands(context string, hc common.HasCommands) error {
 	if context != "" {
-		return nil, nil
+		return nil
 	}
-	return []cli.Command{{
-		Name:   "apply",
-		Usage:  "Apply the instances of this project using the provided values.",
-		Action: instance.ExecuteFromCli,
-		Flags: []cli.Flag{
-			cli.DurationFlag{
-				Name: "wait, w",
-				Usage: "If set to value larger than 0 it will wait for this amount of time for successful\n" +
-					"\trunning environment which was deployed. If it fails it will try to rollback.",
-				EnvVar:      "KUBOR_WAIT",
-				Value:       time.Minute * 5,
-				Destination: &instance.Wait,
-			},
-			cli.GenericFlag{
-				Name: "predicate, p",
-				Usage: "Filters every object that should be listed. Empty allows everything.\n" +
-					"\tPattern: \"[!]<template>=<must match regex>\", Example: \"{{.spec.name}}=Foo.*\"",
-				EnvVar: "KUBOR_PREDICATE",
-				Value:  &instance.Predicate,
-			},
-			cli.GenericFlag{
-				Name: "dryRun",
-				Usage: "If set to 'before' it will execute a dry run before the actual apply.\n" +
-					"\tThis is perfect in cases where the first parts of the apply configuration works and\n" +
-					"\tthe following stuff is broken. If set to 'never' apply will be executed without dry run.\n" +
-					"\tOn 'only' it will only run the dry run but not the apply.",
-				EnvVar: "KUBOR_DRY_RUN",
-				Value:  &instance.DryRun,
-			},
-		},
-	}}, nil
+
+	cmd := hc.Command("apply", "Apply the instances of this project using the provided values.").
+		Action(instance.ExecuteFromCli)
+
+	cmd.Flag("wait", "If set to value larger than 0 it will wait for this amount of time for successful"+
+		" running environment which was deployed. If it fails it will try to rollback.").
+		Short('w').
+		Envar("KUBOR_WAIT").
+		Default((time.Minute * 5).String()).
+		DurationVar(&instance.Wait)
+	cmd.Flag("predicate", "Filters every object that should be listed. Empty allows everything."+
+		" Example: \"{{.spec.name}}=Foo.*\"").
+		PlaceHolder("[!]<template>=<must match regex>").
+		Short('p').
+		Envar("KUBOR_PREDICATE").
+		SetValue(&instance.Predicate)
+	cmd.Flag("dryRun", "If set to 'before' it will execute a dry run before the actual apply."+
+		" This is perfect in cases where the first parts of the apply configuration works and"+
+		" the following stuff is broken. If set to 'never' apply will be executed without dry run."+
+		" On 'only' it will only run the dry run but not the apply.").
+		Envar("KUBOR_DRY_RUN").
+		Default(instance.DryRun.String()).
+		SetValue(&instance.DryRun)
+	cmd.Flag("dryRunOn", "If set to 'server' it will execute the dry run on the target kubernetes server"+
+		" if this is not supported the apply will fail."+
+		" If set to 'client' it will only run inside kubor and never will call the server at all."+
+		" If set to 'serverIfPossible' it will check if it is available to run on the server if not it will just run"+
+		" inside kubor.").
+		Envar("KUBOR_DRY_RUN_ON").
+		Default(instance.DryRunOn.String()).
+		SetValue(&instance.DryRunOn)
+
+	return nil
 }
 
-func (instance *Apply) RunWithArguments(arguments CommandArguments) error {
+func (instance *Apply) RunWithArguments(arguments Arguments) error {
 	task := &applyTask{
 		source:        instance,
 		dynamicClient: arguments.DynamicClient,
+		runtime:       arguments.Runtime,
 	}
 	oh, err := model.NewObjectHandler(task.onObject)
 	if err != nil {
@@ -101,7 +105,7 @@ func (instance *Apply) RunWithArguments(arguments CommandArguments) error {
 	}
 
 	if instance.DryRun == DryRunType("before") || instance.DryRun == DryRunType("only") {
-		err = task.applySet.Execute(true)
+		err = task.applySet.Execute(instance.DryRunOn)
 		if err != nil {
 			return err
 		}
@@ -110,7 +114,7 @@ func (instance *Apply) RunWithArguments(arguments CommandArguments) error {
 		}
 	}
 
-	err = task.applySet.Execute(false)
+	err = task.applySet.Execute(kubernetes.NowhereDryRun)
 	if err != nil {
 		return err
 	}
@@ -126,6 +130,7 @@ type applyTask struct {
 	source        *Apply
 	dynamicClient dynamic.Interface
 	applySet      kubernetes.ApplySet
+	runtime       kubernetes.Runtime
 }
 
 func (instance *applyTask) onObject(source string, object runtime.Object, unstructured *unstructured.Unstructured) error {
@@ -135,7 +140,7 @@ func (instance *applyTask) onObject(source string, object runtime.Object, unstru
 		return nil
 	}
 
-	apply, err := kubernetes.NewApplyObject(source, unstructured, instance.dynamicClient)
+	apply, err := kubernetes.NewApplyObject(source, unstructured, instance.dynamicClient, instance.runtime)
 	if err != nil {
 		return err
 	}

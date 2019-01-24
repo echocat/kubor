@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"github.com/urfave/cli"
+	"github.com/alecthomas/kingpin"
 	"kubor/command"
 	"kubor/common"
 	"kubor/kubernetes"
@@ -21,75 +21,47 @@ var (
 	extVersion  = "development"
 	extRevision = "development"
 	extCompiled = ""
+)
 
-	versionCommand = cli.Command{
-		Name:  "version",
-		Usage: "Print the actual version and other useful information.",
-		Action: func(*cli.Context) error {
-			_, err := fmt.Fprintf(os.Stderr, `kubor
+func version(_ *kingpin.ParseContext) error {
+	_, err := fmt.Fprintf(os.Stderr, `kubor
  Version:      %s
  Built:        %s
  Git revision: %s
  Go version:   %s
  OS/Arch:      %s/%s
 `,
-				extVersion, extCompiled, extRevision, runtime.Version(), runtime.GOOS, runtime.GOARCH)
-			return err
-		},
-	}
-)
+		extVersion, extCompiled, extRevision, runtime.Version(), runtime.GOOS, runtime.GOARCH)
+	return err
+}
 
 func main() {
-	var helpRequested bool
-	cli.HelpFlag = cli.BoolFlag{
-		Name:        "help, h",
-		Usage:       "Show help",
-		Destination: &helpRequested,
-	}
-
 	if extCompiled == "" {
 		extCompiled = time.Now().Format(timeFormat)
 	}
-	compiled, err := time.Parse(timeFormat, extCompiled)
-	if err != nil {
-		panic(fmt.Sprintf("illegal main.Compiled value '%s': %v", extCompiled, err))
-	}
 
 	pf := model.NewProjectFactory()
-	err = command.Init(pf)
-	if err != nil {
+	if err := command.Init(pf); err != nil {
 		panic(err)
 	}
-	app := cli.NewApp()
-	app.Name = "kubor"
-	app.Usage = "https://github.com/levertonai/kubor"
-	app.Description = "Safely bringing repositories using templating and charting inside CI/CD pipelines to Kubernetes."
-	app.Version = extVersion
-	app.Compiled = compiled
 
-	app.HideHelp = true
-	app.HideVersion = true
-	app.Flags = append(app.Flags, pf.Flags()...)
-	app.Flags = append(app.Flags, kubernetes.KubeConfigFlags...)
-	app.Flags = append(app.Flags, log.DefaultLogger.Flags()...)
-	app.Flags = append(app.Flags, cli.HelpFlag)
+	app := kingpin.New("kubor", "Safely bringing repositories using templating and charting inside CI/CD pipelines to Kubernetes.").
+		Version(extVersion).
+		ErrorWriter(os.Stderr).
+		UsageWriter(os.Stderr).
+		PreAction(func(_ *kingpin.ParseContext) error {
+			return log.DefaultLogger.Init()
+		})
 
-	app.Commands, err = common.CreateCliCommands("")
-	if err != nil {
+	pf.ConfigureFlags(app)
+	kubernetes.ConfigureKubeConfigFlags(app)
+	log.DefaultLogger.ConfigureFlags(app)
+
+	if err := common.ConfigureCliCommands("", app); err != nil {
 		panic(err)
 	}
-	app.Commands = append(app.Commands, versionCommand)
+	app.Command("version", "Print the actual version and other useful information.").
+		Action(version)
 
-	app.Writer = os.Stderr
-	app.ErrWriter = os.Stderr
-
-	app.Before = func(*cli.Context) error {
-		return log.DefaultLogger.Init()
-	}
-
-	if err := app.Run(os.Args); err != nil {
-		//noinspection GoUnhandledErrorResult
-		fmt.Fprint(app.ErrWriter, err.Error())
-		os.Exit(1)
-	}
+	kingpin.MustParse(app.Parse(os.Args[1:]))
 }

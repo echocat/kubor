@@ -2,21 +2,20 @@ package command
 
 import (
 	"fmt"
-	"github.com/urfave/cli"
+	"github.com/alecthomas/kingpin"
 	"k8s.io/client-go/dynamic"
-	restclient "k8s.io/client-go/rest"
 	"kubor/kubernetes"
 	"kubor/model"
 )
 
-type CommandArguments struct {
+type Arguments struct {
 	Project       model.Project
-	Config        restclient.Config
+	Runtime       kubernetes.Runtime
 	DynamicClient dynamic.Interface
 }
 
 type RunnableConsumingCommandArguments interface {
-	RunWithArguments(args CommandArguments) error
+	RunWithArguments(args Arguments) error
 }
 
 type Command struct {
@@ -29,36 +28,36 @@ func (instance *Command) Init(pf *model.ProjectFactory) error {
 	return nil
 }
 
-func (instance *Command) createProject(contextName string) (model.Project, error) {
+func (instance *Command) createProject(runtime kubernetes.Runtime) (model.Project, error) {
 	if instance.ProjectFactory == nil {
 		return model.Project{}, fmt.Errorf("command not yet initialized")
 	}
-	return instance.ProjectFactory.Create(contextName)
+	return instance.ProjectFactory.Create(runtime)
 }
 
-func (instance *Command) ExecuteFromCli(*cli.Context) error {
+func (instance *Command) ExecuteFromCli(*kingpin.ParseContext) error {
 	return instance.Run()
 }
 
 func (instance *Command) Run() error {
-	config, contextName, err := kubernetes.NewKubeConfig()
+	runtime, err := kubernetes.NewRuntime()
 	if err != nil {
 		return err
 	}
-	dc, err := dynamic.NewForConfig(config)
+	dc, err := dynamic.NewForConfig(runtime.Config)
 	if err != nil {
 		return err
 	}
-	project, err := instance.createProject(contextName)
+	project, err := instance.createProject(runtime)
 	if err != nil {
 		return err
 	}
 	if instance.Parent == nil {
 		panic("no Parent defined")
 	}
-	return instance.Parent.RunWithArguments(CommandArguments{
+	return instance.Parent.RunWithArguments(Arguments{
 		Project:       project,
-		Config:        *config,
+		Runtime:       runtime,
 		DynamicClient: dc,
 	})
 }
