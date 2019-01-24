@@ -2,14 +2,14 @@ package command
 
 import (
 	"fmt"
+	"github.com/levertonai/kubor/common"
+	"github.com/levertonai/kubor/kubernetes"
+	"github.com/levertonai/kubor/model"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer/json"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes/scheme"
-	"kubor/common"
-	"kubor/kubernetes"
-	"kubor/model"
 	"os"
 )
 
@@ -27,7 +27,11 @@ type Get struct {
 	SourceHint bool
 }
 
-func (instance *Get) ConfigureCliCommands(hc common.HasCommands) error {
+func (instance *Get) ConfigureCliCommands(context string, hc common.HasCommands) error {
+	if context != "" {
+		return nil
+	}
+
 	cmd := hc.Command("get", "Get the instances of this project using the provided values.").
 		Action(instance.ExecuteFromCli)
 

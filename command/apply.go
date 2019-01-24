@@ -2,12 +2,12 @@ package command
 
 import (
 	"fmt"
+	"github.com/levertonai/kubor/common"
+	"github.com/levertonai/kubor/kubernetes"
+	"github.com/levertonai/kubor/model"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/dynamic"
-	"kubor/common"
-	"kubor/kubernetes"
-	"kubor/model"
 	"time"
 )
 
@@ -44,7 +44,11 @@ type Apply struct {
 	DryRunOn  kubernetes.DryRunOn
 }
 
-func (instance *Apply) ConfigureCliCommands(hc common.HasCommands) error {
+func (instance *Apply) ConfigureCliCommands(context string, hc common.HasCommands) error {
+	if context != "" {
+		return nil
+	}
+
 	cmd := hc.Command("apply", "Apply the instances of this project using the provided values.").
 		Action(instance.ExecuteFromCli)
 

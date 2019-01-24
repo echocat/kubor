@@ -2,12 +2,12 @@ package command
 
 import (
 	"fmt"
+	"github.com/levertonai/kubor/common"
+	"github.com/levertonai/kubor/model"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer/json"
 	"k8s.io/client-go/kubernetes/scheme"
-	"kubor/common"
-	"kubor/model"
 	"os"
 )
 
@@ -25,7 +25,10 @@ type Evaluate struct {
 	Predicate  common.EvaluatingPredicate
 }
 
-func (instance *Evaluate) ConfigureCliCommands(hc common.HasCommands) error {
+func (instance *Evaluate) ConfigureCliCommands(context string, hc common.HasCommands) error {
+	if context != "" {
+		return nil
+	}
 	cmd := hc.Command("evaluate", "Evaluate the instances of this project using the provided values.").
 		Alias("eval").
 		Action(instance.ExecuteFromCli)

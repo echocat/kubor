@@ -1,4 +1,4 @@
-module kubor
+module github.com/levertonai/kubor
 
 require (
 	github.com/Masterminds/semver v1.4.2 // indirect
@@ -6,14 +6,14 @@ require (
 	github.com/alecthomas/kingpin v2.2.6+incompatible
 	github.com/alecthomas/template v0.0.0-20160405071501-a0175ee3bccc // indirect
 	github.com/alecthomas/units v0.0.0-20151022065526-2efee857e7cf // indirect
-	github.com/aokoli/goutils v1.0.1 // indirect
+	github.com/aokoli/goutils v1.0.1
 	github.com/gogo/protobuf v1.1.1 // indirect
 	github.com/google/btree v0.0.0-20180813153112-4030bb1f1f0c // indirect
 	github.com/google/gofuzz v0.0.0-20170612174753-24818f796faf // indirect
 	github.com/google/uuid v1.1.0 // indirect
 	github.com/googleapis/gnostic v0.2.0
 	github.com/gregjones/httpcache v0.0.0-20181110185634-c63ab54fda8f // indirect
-	github.com/huandu/xstrings v1.2.0 // indirect
+	github.com/huandu/xstrings v1.2.0
 	github.com/imdario/mergo v0.3.6
 	github.com/json-iterator/go v1.1.5 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect

@@ -1,13 +1,13 @@
 package common
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
+	"github.com/levertonai/kubor/template"
+	"github.com/levertonai/kubor/template/functions"
 	"reflect"
 	"regexp"
 	"strings"
-	"text/template"
 )
 
 type EvaluatingPredicate struct {
@@ -142,14 +142,14 @@ func ParseEvaluatingPartMatcher(plain string) (EvaluatingPartMatcher, error) {
 }
 
 func NewEvaluatingPartMatcher(valueTemplate string, check string) (EvaluatingPartMatcher, error) {
-	if valueTemplateInstance, err := NewTemplate("", valueTemplate); err != nil {
+	if tmpl, err := functions.DefaultTemplateFactory().New("", valueTemplate); err != nil {
 		return EvaluatingPartMatcher{}, err
 	} else if checkInstance, err := regexp.Compile(fmt.Sprintf("^%s$", check)); err != nil {
 		return EvaluatingPartMatcher{}, err
 	} else {
 		return EvaluatingPartMatcher{
 			valueTemplateSource: valueTemplate,
-			valueTemplate:       valueTemplateInstance,
+			valueTemplate:       tmpl,
 			check:               checkInstance,
 		}, nil
 	}
@@ -157,16 +157,12 @@ func NewEvaluatingPartMatcher(valueTemplate string, check string) (EvaluatingPar
 
 type EvaluatingPartMatcher struct {
 	valueTemplateSource string
-	valueTemplate       *template.Template
+	valueTemplate       template.Template
 	check               *regexp.Regexp
 }
 
 func (instance EvaluatingPartMatcher) Value(data interface{}) (string, error) {
-	buf := new(bytes.Buffer)
-	if err := instance.valueTemplate.Execute(buf, data); err != nil {
-		return "", nil
-	}
-	return buf.String(), nil
+	return instance.valueTemplate.ExecuteToString(data)
 }
 
 func (instance EvaluatingPartMatcher) Matches(data interface{}) (bool, error) {

@@ -3,11 +3,11 @@ package main
 import (
 	"fmt"
 	"github.com/alecthomas/kingpin"
-	"kubor/command"
-	"kubor/common"
-	"kubor/kubernetes"
-	"kubor/log"
-	"kubor/model"
+	"github.com/levertonai/kubor/command"
+	"github.com/levertonai/kubor/common"
+	"github.com/levertonai/kubor/kubernetes"
+	"github.com/levertonai/kubor/log"
+	"github.com/levertonai/kubor/model"
 	"os"
 	"runtime"
 	"time"
@@ -57,7 +57,7 @@ func main() {
 	kubernetes.ConfigureKubeConfigFlags(app)
 	log.DefaultLogger.ConfigureFlags(app)
 
-	if err := common.ConfigureCliCommands(app); err != nil {
+	if err := common.ConfigureCliCommands("", app); err != nil {
 		panic(err)
 	}
 	app.Command("version", "Print the actual version and other useful information.").

@@ -2,8 +2,8 @@ package command
 
 import (
 	"github.com/alecthomas/kingpin"
+	"github.com/levertonai/kubor/common"
 	"gopkg.in/yaml.v2"
-	"kubor/common"
 	"os"
 )
 
@@ -18,7 +18,10 @@ type Values struct {
 	Command
 }
 
-func (instance *Values) ConfigureCliCommands(hc common.HasCommands) error {
+func (instance *Values) ConfigureCliCommands(context string, hc common.HasCommands) error {
+	if context != "" {
+		return nil
+	}
 	hc.Command("values", "Get the aggregated values used by the project based on the given parameters.").
 		Action(func(context *kingpin.ParseContext) error {
 			return instance.Run()

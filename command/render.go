@@ -2,8 +2,8 @@ package command
 
 import (
 	"fmt"
+	"github.com/levertonai/kubor/common"
 	"io"
-	"kubor/common"
 	"os"
 	"strings"
 )
@@ -29,7 +29,11 @@ type Render struct {
 	SourceHint   bool
 }
 
-func (instance *Render) ConfigureCliCommands(hc common.HasCommands) error {
+func (instance *Render) ConfigureCliCommands(context string, hc common.HasCommands) error {
+	if context != "" {
+		return nil
+	}
+
 	cmd := hc.Command("render", "Renders the instances of this project using the provided values.").
 		Action(instance.ExecuteFromCli)
 
