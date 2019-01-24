@@ -27,7 +27,8 @@ func (instance DryRunType) String() string {
 
 func init() {
 	cmd := &Apply{
-		DryRun: DryRunType("before"),
+		DryRun:   DryRunType("before"),
+		DryRunOn: kubernetes.ServerIfPossibleDryRun,
 	}
 	cmd.Parent = cmd
 	RegisterInitializable(cmd)
@@ -40,6 +41,7 @@ type Apply struct {
 	Wait      time.Duration
 	Predicate common.EvaluatingPredicate
 	DryRun    DryRunType
+	DryRunOn  kubernetes.DryRunOn
 }
 
 func (instance *Apply) ConfigureCliCommands(hc common.HasCommands) error {
@@ -65,14 +67,23 @@ func (instance *Apply) ConfigureCliCommands(hc common.HasCommands) error {
 		Envar("KUBOR_DRY_RUN").
 		Default(instance.DryRun.String()).
 		SetValue(&instance.DryRun)
+	cmd.Flag("dryRunOn", "If set to 'server' it will execute the dry run on the target kubernetes server"+
+		" if this is not supported the apply will fail."+
+		" If set to 'client' it will only run inside kubor and never will call the server at all."+
+		" If set to 'serverIfPossible' it will check if it is available to run on the server if not it will just run"+
+		" inside kubor.").
+		Envar("KUBOR_DRY_RUN_ON").
+		Default(instance.DryRunOn.String()).
+		SetValue(&instance.DryRunOn)
 
 	return nil
 }
 
-func (instance *Apply) RunWithArguments(arguments CommandArguments) error {
+func (instance *Apply) RunWithArguments(arguments Arguments) error {
 	task := &applyTask{
 		source:        instance,
 		dynamicClient: arguments.DynamicClient,
+		runtime:       arguments.Runtime,
 	}
 	oh, err := model.NewObjectHandler(task.onObject)
 	if err != nil {
@@ -90,7 +101,7 @@ func (instance *Apply) RunWithArguments(arguments CommandArguments) error {
 	}
 
 	if instance.DryRun == DryRunType("before") || instance.DryRun == DryRunType("only") {
-		err = task.applySet.Execute(true)
+		err = task.applySet.Execute(instance.DryRunOn)
 		if err != nil {
 			return err
 		}
@@ -99,7 +110,7 @@ func (instance *Apply) RunWithArguments(arguments CommandArguments) error {
 		}
 	}
 
-	err = task.applySet.Execute(false)
+	err = task.applySet.Execute(kubernetes.NowhereDryRun)
 	if err != nil {
 		return err
 	}
@@ -115,6 +126,7 @@ type applyTask struct {
 	source        *Apply
 	dynamicClient dynamic.Interface
 	applySet      kubernetes.ApplySet
+	runtime       kubernetes.Runtime
 }
 
 func (instance *applyTask) onObject(source string, object runtime.Object, unstructured *unstructured.Unstructured) error {
@@ -124,7 +136,7 @@ func (instance *applyTask) onObject(source string, object runtime.Object, unstru
 		return nil
 	}
 
-	apply, err := kubernetes.NewApplyObject(source, unstructured, instance.dynamicClient)
+	apply, err := kubernetes.NewApplyObject(source, unstructured, instance.dynamicClient, instance.runtime)
 	if err != nil {
 		return err
 	}

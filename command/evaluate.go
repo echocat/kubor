@@ -44,7 +44,7 @@ func (instance *Evaluate) ConfigureCliCommands(hc common.HasCommands) error {
 	return nil
 }
 
-func (instance *Evaluate) RunWithArguments(arguments CommandArguments) error {
+func (instance *Evaluate) RunWithArguments(arguments Arguments) error {
 	task := &evaluateTask{
 		source: instance,
 		first:  true,

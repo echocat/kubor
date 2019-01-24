@@ -15,13 +15,13 @@ import (
 )
 
 type Apply interface {
-	Execute(dry bool) error
+	Execute(DryRunOn) error
 	Wait(timeout time.Duration) error
 	Rollback()
 	String() string
 }
 
-func NewApplyObject(source string, object *unstructured.Unstructured, client dynamic.Interface) (*ApplyObject, error) {
+func NewApplyObject(source string, object *unstructured.Unstructured, client dynamic.Interface, runtime Runtime) (*ApplyObject, error) {
 	objectResource, err := GetObjectResource(object, client)
 	if err != nil {
 		return nil, err
@@ -31,7 +31,8 @@ func NewApplyObject(source string, object *unstructured.Unstructured, client dyn
 		log: log.
 			WithField("source", source).
 			WithField("object", objectResource),
-		object: objectResource,
+		object:  objectResource,
+		runtime: runtime,
 	}, nil
 }
 
@@ -42,13 +43,27 @@ type ApplyObject struct {
 	original *ObjectResource
 
 	applied *unstructured.Unstructured
+	runtime Runtime
 }
 
 func (instance ApplyObject) String() string {
 	return instance.object.String()
 }
 
-func (instance *ApplyObject) Execute(dry bool) error {
+func (instance *ApplyObject) Execute(dry DryRunOn) error {
+	if dry == ServerIfPossibleDryRun || dry == ServerDryRun {
+		if serverSidePossible, err := HasServerDryRunSupport(instance.object.Kind, instance.object.Client, instance.runtime); err != nil {
+			return err
+		} else if dry == ServerDryRun {
+			if !serverSidePossible {
+				return fmt.Errorf("%v does not support server side dry run", instance.object.Kind)
+			}
+		} else if serverSidePossible {
+			dry = ServerDryRun
+		} else {
+			dry = ClientDryRun
+		}
+	}
 	l := instance.log.
 		WithField("action", "checkExistence")
 	var err error
@@ -165,11 +180,11 @@ func (instance *ApplyObject) Wait(timeout time.Duration) (err error) {
 	}
 }
 
-func (instance *ApplyObject) create(dry bool) (err error) {
+func (instance *ApplyObject) create(dry DryRunOn) (err error) {
 	start := time.Now()
 	l := instance.log.
 		WithField("action", "create").
-		WithField("dry", dry)
+		WithField("dryRunOn", dry)
 	defer func() {
 		ld := l.
 			WithField("duration", time.Now().Sub(start)).
@@ -195,21 +210,23 @@ func (instance *ApplyObject) create(dry bool) (err error) {
 	}()
 	l.Debug("Create %v...", instance.object)
 	opts := metav1.CreateOptions{}
-	if dry {
-		opts.DryRun = []string{"All"}
+	if dry == ServerDryRun {
+		opts.DryRun = []string{metav1.DryRunAll}
 	}
-	if instance.applied, err = instance.object.Create(&opts); err != nil {
-		instance.applied = nil
-		return
+	if dry != ClientDryRun {
+		if instance.applied, err = instance.object.Create(&opts); err != nil {
+			instance.applied = nil
+			return
+		}
 	}
 	return
 }
 
-func (instance *ApplyObject) update(dry bool) (err error) {
+func (instance *ApplyObject) update(dry DryRunOn) (err error) {
 	start := time.Now()
 	l := instance.log.
 		WithField("action", "update").
-		WithField("dry", dry)
+		WithField("dryRunOn", dry)
 	defer func() {
 		ld := l.
 			WithField("duration", time.Now().Sub(start)).
@@ -235,12 +252,14 @@ func (instance *ApplyObject) update(dry bool) (err error) {
 	}()
 	l.Debug("Update %v...", instance.object)
 	opts := metav1.UpdateOptions{}
-	if dry {
+	if dry == ServerDryRun {
 		opts.DryRun = []string{"All"}
 	}
-	if instance.applied, err = instance.object.Update(&opts); err != nil {
-		instance.applied = nil
-		return
+	if dry != ClientDryRun {
+		if instance.applied, err = instance.object.Update(&opts); err != nil {
+			instance.applied = nil
+			return
+		}
 	}
 	return
 }
@@ -347,9 +366,9 @@ func (instance *ApplySet) Add(apply Apply) {
 	*instance = append(*instance, apply)
 }
 
-func (instance ApplySet) Execute(dry bool) (err error) {
+func (instance ApplySet) Execute(dry DryRunOn) (err error) {
 	defer func() {
-		if err != nil && !dry {
+		if err != nil && !dry.IsEnabled() {
 			instance.Rollback()
 		}
 	}()

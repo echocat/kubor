@@ -5,6 +5,7 @@ import (
 	"gopkg.in/yaml.v2"
 	"io"
 	"kubor/common"
+	"kubor/kubernetes"
 	"kubor/log"
 	"os"
 	"path/filepath"
@@ -80,10 +81,10 @@ func NewProjectFactory() *ProjectFactory {
 	return &ProjectFactory{}
 }
 
-func (instance *ProjectFactory) Create(contextName string) (Project, error) {
+func (instance *ProjectFactory) Create(runtime kubernetes.Runtime) (Project, error) {
 	var err error
 	result := newProject()
-	result.Context = contextName
+	result.Context = runtime.ContextName
 
 	if f, err := os.Open(instance.source); os.IsNotExist(err) {
 		if instance.sourceRequired {

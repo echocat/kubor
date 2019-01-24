@@ -26,7 +26,7 @@ func (instance *Values) ConfigureCliCommands(hc common.HasCommands) error {
 	return nil
 }
 
-func (instance *Values) RunWithArguments(arguments CommandArguments) error {
+func (instance *Values) RunWithArguments(arguments Arguments) error {
 	enc := yaml.NewEncoder(os.Stdout)
 	return enc.Encode(arguments.Project.Values)
 }

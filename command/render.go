@@ -48,7 +48,7 @@ func (instance *Render) ConfigureCliCommands(hc common.HasCommands) error {
 	return nil
 }
 
-func (instance *Render) RunWithArguments(arguments CommandArguments) error {
+func (instance *Render) RunWithArguments(arguments Arguments) error {
 	if instance.TemplateFile != "" {
 		return arguments.Project.RenderedTemplateFile(instance.TemplateFile, os.Stdout)
 	}

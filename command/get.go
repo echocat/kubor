@@ -43,7 +43,7 @@ func (instance *Get) ConfigureCliCommands(hc common.HasCommands) error {
 	return nil
 }
 
-func (instance *Get) RunWithArguments(arguments CommandArguments) error {
+func (instance *Get) RunWithArguments(arguments Arguments) error {
 	task := &getTask{
 		source:        instance,
 		dynamicClient: arguments.DynamicClient,

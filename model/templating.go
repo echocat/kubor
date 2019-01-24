@@ -19,6 +19,7 @@ func newTemplating() Templating {
 	return Templating{
 		TemplateFilePattern: []string{
 			"{{ .Root }}/kubernetes/templates/*.yaml",
+			"{{ .Root }}/kubernetes/templates/*.yml",
 		},
 	}
 }
