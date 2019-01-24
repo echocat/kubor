@@ -1,6 +1,6 @@
 package command
 
-import "kubor/model"
+import "github.com/levertonai/kubor/model"
 
 type Initializable interface {
 	Init(pf *model.ProjectFactory) error

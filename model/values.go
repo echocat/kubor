@@ -2,7 +2,7 @@ package model
 
 import (
 	"fmt"
-	"kubor/common"
+	"github.com/levertonai/kubor/common"
 	"strings"
 )
 

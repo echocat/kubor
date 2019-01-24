@@ -1,6 +1,6 @@
 package functions
 
-import "kubor/template"
+import "github.com/levertonai/kubor/template"
 
 type Category struct {
 	Functions Functions

@@ -2,8 +2,8 @@ package functions
 
 import (
 	"fmt"
+	"github.com/levertonai/kubor/template"
 	"io/ioutil"
-	"kubor/template"
 	"os"
 	"path"
 	"path/filepath"

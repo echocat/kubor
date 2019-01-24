@@ -2,10 +2,10 @@ package command
 
 import (
 	"github.com/alecthomas/kingpin"
+	"github.com/levertonai/kubor/common"
+	"github.com/levertonai/kubor/kubernetes"
 	"gopkg.in/yaml.v2"
 	"k8s.io/client-go/tools/clientcmd"
-	"kubor/common"
-	"kubor/kubernetes"
 	"os"
 )
 

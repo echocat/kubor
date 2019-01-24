@@ -1,4 +1,4 @@
-module kubor
+module github.com/levertonai/kubor
 
 require (
 	github.com/Masterminds/semver v1.4.2 // indirect

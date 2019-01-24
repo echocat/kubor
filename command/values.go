@@ -2,8 +2,8 @@ package command
 
 import (
 	"github.com/alecthomas/kingpin"
+	"github.com/levertonai/kubor/common"
 	"gopkg.in/yaml.v2"
-	"kubor/common"
 	"os"
 )
 

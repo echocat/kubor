@@ -2,12 +2,12 @@ package command
 
 import (
 	"fmt"
+	"github.com/levertonai/kubor/common"
+	"github.com/levertonai/kubor/kubernetes"
+	"github.com/levertonai/kubor/model"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/dynamic"
-	"kubor/common"
-	"kubor/kubernetes"
-	"kubor/model"
 	"time"
 )
 

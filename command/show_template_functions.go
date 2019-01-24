@@ -3,17 +3,18 @@ package command
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/urfave/cli"
+	"github.com/alecthomas/kingpin"
+	"github.com/levertonai/kubor/common"
+	"github.com/levertonai/kubor/template/functions"
 	"gopkg.in/yaml.v2"
-	"kubor/common"
-	"kubor/template/functions"
 	"os"
 	"regexp"
 	"strings"
 )
 
 const (
-	showTemplateFunctionsTemplate = `List of available function within kubor rending context by category:
+	showTemplateFunctionsTemplate = `{{$width := .Width -}}
+List of available function within kubor rending context by category:
 
 {{range $categoryName, $category := .Categories -}}
 {{ $categoryName | upper }}:{{range $functionName, $function := $category.Functions}}
@@ -23,13 +24,13 @@ const (
        {{- else }} <{{ $parameter.GetName }}>{{ end -}}
     {{- end -}}{{- " }}" }}
     {{- if $function.Description }}
-    {{ $function.Description | replace "\n" " " | warpCustom 120 "\n    " false }}{{ end -}} 
+    {{ $function.Description | replace "\n" " " | warpCustom $width "\n    " false }}{{ end -}} 
     {{- range $i, $parameter := $function.Parameters }}
     - {{ $parameter.GetName }}: {{ $parameter.GetType -}}
-      {{- if $parameter.Description }} - {{ $parameter.Description | replace "\n" " " | warpCustom 120 "\n      " false  }}{{ end -}}
+      {{- if $parameter.Description }} - {{ $parameter.Description | replace "\n" " " | warpCustom $width "\n      " false  }}{{ end -}}
     {{- end }}
     Returns: {{ $function.Returns.GetType -}}
-      {{- if $function.Returns.Description }} - {{ $function.Returns.Description | replace "\n" " " | warpCustom 120 "\n      " false  }}{{ end }}
+      {{- if $function.Returns.Description }} - {{ $function.Returns.Description | replace "\n" " " | warpCustom $width "\n      " false  }}{{ end }}
 {{ end }}
 {{ end -}}
 NOTES:
@@ -89,37 +90,34 @@ func init() {
 }
 
 type ShowTemplateFunctions struct {
-	Output             ShowTemplateFunctionsOutput
-	FulltextSearchTerm ShowTemplateFulltextTerm
+	Output              ShowTemplateFunctionsOutput
+	FulltextSearchTerm  ShowTemplateFulltextTerm
+	FunctionNameFilters []string
 }
 
-func (instance *ShowTemplateFunctions) CreateCliCommands(context string) ([]cli.Command, error) {
-	if context != "show" {
-		return nil, nil
+func (instance *ShowTemplateFunctions) ConfigureCliCommands(context string, hc common.HasCommands) error {
+	if context != "show/template" {
+		return nil
 	}
-	return []cli.Command{{
-		Name:      "templateFunctions",
-		ArgsUsage: "[function name regexp]",
-		Usage:     "Shows a list of all available template functions.",
-		UsageText: "If [function name regexp] specified only functions that matches at least one of the given patterns.",
-		Action:    instance.ExecuteFromCli,
-		Flags: []cli.Flag{
-			cli.GenericFlag{
-				Name:  "output, o",
-				Usage: "Specifies how to render the output.",
-				Value: &instance.Output,
-			}, cli.GenericFlag{
-				Name:  "fulltextSearch, fulltext, s",
-				Usage: "Specifies a term that needs to be matched in any property of a function (name, description, ...)",
-				Value: &instance.FulltextSearchTerm,
-			},
-		},
-	}}, nil
+	cmd := hc.Command("functions", "Shows a list of all available template functions.").
+		Action(instance.ExecuteFromCli)
+
+	cmd.Arg("function-name-regexp", "Filter for functions that matches at least one of the given patterns.").
+		StringsVar(&instance.FunctionNameFilters)
+
+	cmd.Flag("output", "Specifies how to render the output.").
+		Short('o').
+		SetValue(&instance.Output)
+	cmd.Flag("fulltextSearch", "Specifies a term that needs to be matched in any property of a function (name, description, ...)").
+		Short('s').
+		SetValue(&instance.FulltextSearchTerm)
+
+	return nil
 }
 
-func (instance *ShowTemplateFunctions) createPredicate(c *cli.Context) (func(name string) bool, error) {
-	regexps := make([]*regexp.Regexp, c.NArg())
-	for i, pattern := range c.Args() {
+func (instance *ShowTemplateFunctions) createPredicate() (func(name string) bool, error) {
+	regexps := make([]*regexp.Regexp, len(instance.FunctionNameFilters))
+	for i, pattern := range instance.FunctionNameFilters {
 		if r, err := regexp.Compile(pattern); err != nil {
 			return nil, fmt.Errorf("problems while compile function regexp pattern: %v", err)
 		} else {
@@ -141,7 +139,7 @@ func (instance *ShowTemplateFunctions) createPredicate(c *cli.Context) (func(nam
 	}, nil
 }
 
-func (instance *ShowTemplateFunctions) createFulltextPredicate(c *cli.Context) func(functionName string, function functions.Function) bool {
+func (instance *ShowTemplateFunctions) createFulltextPredicate() func(functionName string, function functions.Function) bool {
 	term := instance.FulltextSearchTerm.Regexp
 	if term == nil {
 		return func(functionName string, function functions.Function) bool {
@@ -159,12 +157,12 @@ func (instance *ShowTemplateFunctions) createFulltextPredicate(c *cli.Context) f
 	}
 }
 
-func (instance *ShowTemplateFunctions) ExecuteFromCli(c *cli.Context) error {
-	namePredicate, err := instance.createPredicate(c)
+func (instance *ShowTemplateFunctions) ExecuteFromCli(_ *kingpin.ParseContext) error {
+	namePredicate, err := instance.createPredicate()
 	if err != nil {
 		return err
 	}
-	fulltextPredicate := instance.createFulltextPredicate(c)
+	fulltextPredicate := instance.createFulltextPredicate()
 
 	context := instance.newShowTemplateFunctionsContext(namePredicate, fulltextPredicate, functions.CategoriesDefault)
 
@@ -193,11 +191,13 @@ func (instance *ShowTemplateFunctions) newShowTemplateFunctionsContext(
 	}
 	return showTemplateFunctionsContext{
 		Categories: targetCategories,
+		Width:      common.GuessOutputWidth(os.Stdout),
 	}
 }
 
 type showTemplateFunctionsContext struct {
 	Categories functions.Categories
+	Width      int
 }
 
 func (instance showTemplateFunctionsContext) renderYaml() error {
@@ -213,7 +213,7 @@ func (instance showTemplateFunctionsContext) renderJson() error {
 
 func (instance showTemplateFunctionsContext) renderText() error {
 	if tmpl, err := functions.DefaultTemplateFactory().New(
-		"show_templateFunctions.go",
+		"show_template_functions.go",
 		showTemplateFunctionsTemplate,
 	); err != nil {
 		return err

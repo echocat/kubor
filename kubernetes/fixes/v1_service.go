@@ -2,8 +2,8 @@ package fixes
 
 import (
 	"fmt"
+	"github.com/levertonai/kubor/common"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"kubor/common"
 	"reflect"
 )
 

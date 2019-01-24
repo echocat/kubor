@@ -1,7 +1,7 @@
 package functions
 
 import (
-	"kubor/template"
+	"github.com/levertonai/kubor/template"
 	"reflect"
 	"strings"
 )

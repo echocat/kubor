@@ -2,8 +2,8 @@ package command
 
 import (
 	"fmt"
+	"github.com/levertonai/kubor/common"
 	"io"
-	"kubor/common"
 	"os"
 	"strings"
 )

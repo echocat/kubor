@@ -3,7 +3,7 @@ package functions
 import (
 	"bytes"
 	"fmt"
-	"kubor/template"
+	"github.com/levertonai/kubor/template"
 	"reflect"
 	"regexp"
 	"strings"

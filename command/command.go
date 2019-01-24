@@ -3,9 +3,9 @@ package command
 import (
 	"fmt"
 	"github.com/alecthomas/kingpin"
+	"github.com/levertonai/kubor/kubernetes"
+	"github.com/levertonai/kubor/model"
 	"k8s.io/client-go/dynamic"
-	"kubor/kubernetes"
-	"kubor/model"
 )
 
 type Arguments struct {

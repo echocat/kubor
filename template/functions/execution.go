@@ -2,7 +2,7 @@ package functions
 
 import (
 	"fmt"
-	"kubor/template"
+	"github.com/levertonai/kubor/template"
 	"reflect"
 )
 

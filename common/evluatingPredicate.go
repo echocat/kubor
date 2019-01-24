@@ -3,8 +3,8 @@ package common
 import (
 	"encoding/json"
 	"fmt"
-	"kubor/template"
-	"kubor/template/functions"
+	"github.com/levertonai/kubor/template"
+	"github.com/levertonai/kubor/template/functions"
 	"reflect"
 	"regexp"
 	"strings"

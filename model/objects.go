@@ -3,6 +3,7 @@ package model
 import (
 	"bytes"
 	"fmt"
+	"github.com/levertonai/kubor/common"
 	"io"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -10,7 +11,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/serializer/json"
 	"k8s.io/apimachinery/pkg/runtime/serializer/streaming"
 	"k8s.io/client-go/kubernetes/scheme"
-	"kubor/common"
 	"strings"
 )
 

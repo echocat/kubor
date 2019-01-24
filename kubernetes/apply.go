@@ -2,14 +2,14 @@ package kubernetes
 
 import (
 	"fmt"
+	"github.com/levertonai/kubor/common"
+	"github.com/levertonai/kubor/kubernetes/fixes"
+	"github.com/levertonai/kubor/log"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/dynamic"
-	"kubor/common"
-	"kubor/kubernetes/fixes"
-	"kubor/log"
 	"reflect"
 	"time"
 )

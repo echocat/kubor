@@ -2,7 +2,7 @@ package functions
 
 import (
 	"fmt"
-	"kubor/template"
+	"github.com/levertonai/kubor/template"
 )
 
 var FuncRender = Function{
@@ -31,16 +31,16 @@ var FuncRender = Function{
 var FuncInclude = Function{
 	Description: "Takes the given <file> and renders the contained template using <data> as regular Golang template.",
 	Parameters: Parameters{{
-		Name:        "data",
-		Description: "The data that could be accessed while the rendering the content of the template of the provided <file>.",
-	}, {
 		Name:        "file",
 		Description: "The actual template file which should be rendered using the provided <data>.",
+	}, {
+		Name:        "data",
+		Description: "The data that could be accessed while the rendering the content of the template of the provided <file>.",
 	}},
 	Returns: Return{
 		Description: "The rendered content.",
 	},
-}.MustWithFunc(func(context template.ExecutionContext, data interface{}, file string) (string, error) {
+}.MustWithFunc(func(context template.ExecutionContext, file string, data interface{}) (string, error) {
 	if resolved, err := resolvePathOfContext(context, file); err != nil {
 		return "", err
 	} else if tmpl, err := context.GetFactory().NewFromFile(resolved); err != nil {
@@ -52,9 +52,27 @@ var FuncInclude = Function{
 	}
 })
 
+var FuncSourceFile = Function{
+	Returns: Return{
+		Description: "The filename which is the source of this rendered template if any.",
+	},
+}.MustWithFunc(func(context template.ExecutionContext) *string {
+	return context.GetTemplate().GetSourceFile()
+})
+
+var FuncSourceName = Function{
+	Returns: Return{
+		Description: "The name this rendered template. Could be a short name or a filename.",
+	},
+}.MustWithFunc(func(context template.ExecutionContext) string {
+	return context.GetTemplate().GetSourceName()
+})
+
 var FuncsTemplating = Functions{
-	"render":  FuncRender,
-	"include": FuncInclude,
+	"render":     FuncRender,
+	"include":    FuncInclude,
+	"sourceFile": FuncSourceFile,
+	"sourceName": FuncSourceName,
 }
 var CategoryTemplating = Category{
 	Functions: FuncsTemplating,
