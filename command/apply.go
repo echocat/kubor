@@ -57,7 +57,6 @@ func (instance *Apply) ConfigureCliCommands(hc common.HasCommands) error {
 		PlaceHolder("[!]<template>=<must match regex>").
 		Short('p').
 		Envar("KUBOR_PREDICATE").
-		Default(instance.Predicate.String()).
 		SetValue(&instance.Predicate)
 	cmd.Flag("dryRun", "If set to 'before' it will execute a dry run before the actual apply."+
 		" This is perfect in cases where the first parts of the apply configuration works and"+

@@ -38,7 +38,6 @@ func (instance *Get) ConfigureCliCommands(hc common.HasCommands) error {
 	cmd.Flag("predicate", "Filters every object that should be listed. Empty allows everything. Pattern: \"[!]<template>=<must match regex>\", Example: \"{{.spec.name}}=Foo.*\"").
 		Short('p').
 		Envar("KUBOR_PREDICATE").
-		Default(instance.Predicate.String()).
 		SetValue(&instance.Predicate)
 
 	return nil

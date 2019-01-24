@@ -39,7 +39,6 @@ func (instance *Evaluate) ConfigureCliCommands(hc common.HasCommands) error {
 		PlaceHolder("[!]<template>=<must match regex>").
 		Short('p').
 		Envar("KUBOR_PREDICATE").
-		Default(instance.Predicate.String()).
 		SetValue(&instance.Predicate)
 
 	return nil
