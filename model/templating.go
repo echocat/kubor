@@ -16,7 +16,8 @@ type Templating struct {
 func newTemplating() Templating {
 	return Templating{
 		TemplateFilePattern: []string{
-			"{{ .Root }}/kubernetes/templates/*.yaml",
+			"?{{ .Root }}/kubernetes/templates/*.yaml",
+			"?{{ .Root }}/kubernetes/templates/*.yml",
 		},
 	}
 }
@@ -68,7 +69,7 @@ func (instance Templating) renderFiles(patterns []string, name string, data inte
 		} else if rendered, err := tmpl.ExecuteToString(data); err != nil {
 			return nil, fmt.Errorf("cannot handle %s pattern: %v", name, err)
 		} else if rendered == "" {
-			// Ignore ... could happen if we use {{ if  }} clauses
+			// Ignore ... could happen if we use {{ if }} clauses
 		} else if matches, err := filepath.Glob(rendered); err != nil {
 			return nil, fmt.Errorf("cannot handle %s pattern '%s' => '%s': %v", name, pattern, rendered, err)
 		} else {

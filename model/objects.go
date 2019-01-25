@@ -64,13 +64,15 @@ func (instance *ObjectHandler) handleContent(source string, content []byte) erro
 	}
 	parts := strings.Split(plain, "\n---\n")
 	for i, part := range parts {
-		fSource := fmt.Sprintf("%s#%d", source, i)
-		if object, _, err := instance.Deserializer.Decode([]byte(part), nil, nil); err != nil {
-			return fmt.Errorf("%s: %v", fSource, err)
-		} else if unstr, err := instance.decodeUnstructured([]byte(part)); err != nil {
-			return fmt.Errorf("%s: %v", fSource, err)
-		} else if err := instance.OnObject(fSource, object, unstr); err != nil {
-			return fmt.Errorf("%s: %v", fSource, err)
+		if strings.TrimSpace(part) != "" {
+			fSource := fmt.Sprintf("%s#%d", source, i)
+			if object, _, err := instance.Deserializer.Decode([]byte(part), nil, nil); err != nil {
+				return fmt.Errorf("%s: %v", fSource, err)
+			} else if unstr, err := instance.decodeUnstructured([]byte(part)); err != nil {
+				return fmt.Errorf("%s: %v", fSource, err)
+			} else if err := instance.OnObject(fSource, object, unstr); err != nil {
+				return fmt.Errorf("%s: %v", fSource, err)
+			}
 		}
 	}
 	return nil
