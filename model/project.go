@@ -14,16 +14,18 @@ import (
 
 type Project struct {
 	// Values set using Load() method.
-	GroupId           string              `yaml:"groupId,omitempty" json:"groupId,omitempty"`
-	ArtifactId        string              `yaml:"artifactId" json:"artifactId"`
-	Release           string              `yaml:"release,omitempty" json:"release,omitempty"`
-	Templating        Templating          `yaml:"templating,omitempty" json:"templating,omitempty"`
-	ConditionalValues []ConditionalValues `yaml:"values,omitempty" json:"values,omitempty"`
+	GroupId           string            `yaml:"groupId,omitempty" json:"groupId,omitempty"`
+	ArtifactId        string            `yaml:"artifactId" json:"artifactId"`
+	Release           string            `yaml:"release,omitempty" json:"release,omitempty"`
+	Templating        Templating        `yaml:"templating,omitempty" json:"templating,omitempty"`
+	ValuesDefinitions ValuesDefinitions `yaml:"values,omitempty" json:"values,omitempty"`
+	ClaimDefinitions  ClaimDefinitions  `yaml:"claims,omitempty" json:"claims,omitempty"`
 
 	// Values set using implicitly.
 	Source  string            `yaml:"-" json:"-"`
 	Root    string            `yaml:"-" json:"-"`
 	Values  Values            `yaml:"-" json:"-"`
+	Claims  Claims            `yaml:"-" json:"-"`
 	Env     map[string]string `yaml:"-" json:"-"`
 	Context string            `yaml:"-" json:"-"`
 }
@@ -31,7 +33,7 @@ type Project struct {
 func newProject() Project {
 	return Project{
 		Templating:        newTemplating(),
-		ConditionalValues: []ConditionalValues{},
+		ValuesDefinitions: []ValuesDefinition{},
 		Values:            Values{},
 	}
 }
@@ -66,6 +68,18 @@ func (instance Project) RenderedTemplatesProvider() (ContentProvider, error) {
 
 func (instance Project) RenderedTemplateFile(file string, writer io.Writer) error {
 	return instance.Templating.RenderTemplateFile(file, instance, writer)
+}
+
+func (instance Project) GetGroupId() string {
+	return instance.GroupId
+}
+
+func (instance Project) GetArtifactId() string {
+	return instance.ArtifactId
+}
+
+func (instance Project) GetRelease() string {
+	return instance.Release
 }
 
 type ProjectFactory struct {
@@ -138,10 +152,7 @@ func (instance *ProjectFactory) populateStage1(input Project) (Project, error) {
 	result := input
 	result.Source = instance.source
 	result.Root = filepath.Dir(result.Source)
-	result.Values = Values{}
-	for k, v := range instance.values {
-		result.Values[k] = v
-	}
+	result.Values = instance.values.Clone()
 	if instance.groupId != "" {
 		result.GroupId = instance.groupId
 	}
@@ -158,17 +169,17 @@ func (instance *ProjectFactory) populateStage1(input Project) (Project, error) {
 	return result, nil
 }
 
-func (instance *ProjectFactory) populateStage2(input Project) (Project, error) {
-	result := input
-	for _, candidate := range input.ConditionalValues {
-		if ok, err := candidate.On.Matches(result); err != nil {
-			return Project{}, err
-		} else if ok {
-			result.Values = result.Values.MergeWith(candidate.Values)
-			result.Values = result.Values.MergeWith(instance.values)
-		}
+func (instance *ProjectFactory) populateStage2(input Project) (result Project, err error) {
+	result = input
+	if result.Values, err = result.ValuesDefinitions.ToValues(result, instance.values); err != nil {
+		return Project{}, err
 	}
-	return result, nil
+	if result.Claims, err = result.ClaimDefinitions.ToClaims(result); err != nil {
+		return Project{}, err
+	}
+	result.ValuesDefinitions = ValuesDefinitions{}
+	result.ClaimDefinitions = ClaimDefinitions{}
+	return
 }
 
 func (instance *ProjectFactory) ConfigureFlags(hf common.HasFlags) {

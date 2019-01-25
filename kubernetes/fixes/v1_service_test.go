@@ -22,7 +22,7 @@ func Test_updateFixForV1ServiceIfClusterIpIsAbsent_ignores_different_GroupVersio
 		},
 	}
 	target := expectedTarget
-	err := updateFixForV1ServiceIfClusterIpIsAbsent(original, &target)
+	err := updateFixForV1ServiceIfClusterIpIsAbsent(mockedPih{}, original, &target)
 	g.Expect(err).To(BeNil())
 	g.Expect(target).To(Equal(expectedTarget))
 }
@@ -38,7 +38,7 @@ func Test_updateFixForV1ServiceIfClusterIpIsAbsent_ignores_on_non_Service_kind(t
 	}
 	expectedTarget := original
 	target := original
-	err := updateFixForV1ServiceIfClusterIpIsAbsent(original, &target)
+	err := updateFixForV1ServiceIfClusterIpIsAbsent(mockedPih{}, original, &target)
 	g.Expect(err).To(BeNil())
 	g.Expect(target).To(Equal(expectedTarget))
 }
@@ -54,7 +54,7 @@ func Test_updateFixForV1ServiceIfClusterIpIsAbsent_ignores_on_non_v1_version(t *
 	}
 	expectedTarget := original
 	target := original
-	err := updateFixForV1ServiceIfClusterIpIsAbsent(original, &target)
+	err := updateFixForV1ServiceIfClusterIpIsAbsent(mockedPih{}, original, &target)
 	g.Expect(err).To(BeNil())
 	g.Expect(target).To(Equal(expectedTarget))
 }
@@ -83,7 +83,7 @@ func Test_updateFixForV1ServiceIfClusterIpIsAbsent_ignores_if_original_has_no_cl
 			"kind":       "Service",
 		},
 	}
-	err := updateFixForV1ServiceIfClusterIpIsAbsent(original, &target)
+	err := updateFixForV1ServiceIfClusterIpIsAbsent(mockedPih{}, original, &target)
 	g.Expect(err).To(BeNil())
 	g.Expect(expectedTarget).To(Equal(target))
 }
@@ -112,7 +112,7 @@ func Test_updateFixForV1ServiceIfClusterIpIsAbsent_ignores_if_original_clusterIp
 			"kind":       "Service",
 		},
 	}
-	err := updateFixForV1ServiceIfClusterIpIsAbsent(original, &target)
+	err := updateFixForV1ServiceIfClusterIpIsAbsent(mockedPih{}, original, &target)
 	g.Expect(err).To(BeNil())
 	g.Expect(target).To(Equal(expectedTarget))
 }
@@ -136,7 +136,7 @@ func Test_updateFixForV1ServiceIfClusterIpIsAbsent_fails_if_target_has_spec_whic
 			"spec":       666,
 		},
 	}
-	err := updateFixForV1ServiceIfClusterIpIsAbsent(original, &target)
+	err := updateFixForV1ServiceIfClusterIpIsAbsent(mockedPih{}, original, &target)
 	g.Expect(err).ToNot(BeNil())
 	g.Expect(err.Error()).To(Equal("'spec' property of target does already exists but is not of type map[string]interface{} it is int"))
 }
@@ -160,7 +160,7 @@ func Test_updateFixForV1ServiceIfClusterIpIsAbsent_set_spec_and_clusterIP(t *tes
 			"kind":       "Service",
 		},
 	}
-	err := updateFixForV1ServiceIfClusterIpIsAbsent(original, &target)
+	err := updateFixForV1ServiceIfClusterIpIsAbsent(mockedPih{}, original, &target)
 	g.Expect(err).To(BeNil())
 	g.Expect(target).To(Equal(expectedTarget))
 }
@@ -196,7 +196,7 @@ func Test_updateFixForV1ServiceIfClusterIpIsAbsent_set_clusterIP(t *testing.T) {
 			},
 		},
 	}
-	err := updateFixForV1ServiceIfClusterIpIsAbsent(original, &target)
+	err := updateFixForV1ServiceIfClusterIpIsAbsent(mockedPih{}, original, &target)
 	g.Expect(err).To(BeNil())
 	g.Expect(target).To(Equal(expectedTarget))
 }
@@ -217,7 +217,7 @@ func Test_updateFixForV1ServiceIfResourceVersionIsAbsent_ignores_different_Group
 		},
 	}
 	target := expectedTarget
-	err := updateFixForV1ServiceIfResourceVersionIsAbsent(original, &target)
+	err := updateFixForV1ServiceIfResourceVersionIsAbsent(mockedPih{}, original, &target)
 	g.Expect(err).To(BeNil())
 	g.Expect(target).To(Equal(expectedTarget))
 }
@@ -233,7 +233,7 @@ func Test_updateFixForV1ServiceIfResourceVersionIsAbsent_ignores_on_non_Service_
 	}
 	expectedTarget := original
 	target := original
-	err := updateFixForV1ServiceIfResourceVersionIsAbsent(original, &target)
+	err := updateFixForV1ServiceIfResourceVersionIsAbsent(mockedPih{}, original, &target)
 	g.Expect(err).To(BeNil())
 	g.Expect(target).To(Equal(expectedTarget))
 }
@@ -249,7 +249,7 @@ func Test_updateFixForV1ServiceIfResourceVersionIsAbsent_ignores_on_non_v1_versi
 	}
 	expectedTarget := original
 	target := original
-	err := updateFixForV1ServiceIfResourceVersionIsAbsent(original, &target)
+	err := updateFixForV1ServiceIfResourceVersionIsAbsent(mockedPih{}, original, &target)
 	g.Expect(err).To(BeNil())
 	g.Expect(target).To(Equal(expectedTarget))
 }
@@ -278,7 +278,7 @@ func Test_updateFixForV1ServiceIfResourceVersionIsAbsent_ignores_if_original_has
 			"kind":       "Service",
 		},
 	}
-	err := updateFixForV1ServiceIfResourceVersionIsAbsent(original, &target)
+	err := updateFixForV1ServiceIfResourceVersionIsAbsent(mockedPih{}, original, &target)
 	g.Expect(err).To(BeNil())
 	g.Expect(expectedTarget).To(Equal(target))
 }
@@ -307,7 +307,7 @@ func Test_updateFixForV1ServiceIfResourceVersionIsAbsent_ignores_if_original_res
 			"kind":       "Service",
 		},
 	}
-	err := updateFixForV1ServiceIfResourceVersionIsAbsent(original, &target)
+	err := updateFixForV1ServiceIfResourceVersionIsAbsent(mockedPih{}, original, &target)
 	g.Expect(err).To(BeNil())
 	g.Expect(target).To(Equal(expectedTarget))
 }
@@ -331,7 +331,7 @@ func Test_updateFixForV1ServiceIfResourceVersionIsAbsent_fails_if_target_has_met
 			"metadata":   666,
 		},
 	}
-	err := updateFixForV1ServiceIfResourceVersionIsAbsent(original, &target)
+	err := updateFixForV1ServiceIfResourceVersionIsAbsent(mockedPih{}, original, &target)
 	g.Expect(err).ToNot(BeNil())
 	g.Expect(err.Error()).To(Equal("'metadata' property of target does already exists but is not of type map[string]interface{} it is int"))
 }
@@ -355,7 +355,7 @@ func Test_updateFixForV1ServiceIfResourceVersionIsAbsent_set_metadata_and_resour
 			"kind":       "Service",
 		},
 	}
-	err := updateFixForV1ServiceIfResourceVersionIsAbsent(original, &target)
+	err := updateFixForV1ServiceIfResourceVersionIsAbsent(mockedPih{}, original, &target)
 	g.Expect(err).To(BeNil())
 	g.Expect(target).To(Equal(expectedTarget))
 }
@@ -391,7 +391,22 @@ func Test_updateFixForV1ServiceIfResourceVersionIsAbsent_set_resourceVersion(t *
 			},
 		},
 	}
-	err := updateFixForV1ServiceIfResourceVersionIsAbsent(original, &target)
+	err := updateFixForV1ServiceIfResourceVersionIsAbsent(mockedPih{}, original, &target)
 	g.Expect(err).To(BeNil())
 	g.Expect(target).To(Equal(expectedTarget))
+}
+
+type mockedPih struct {
+}
+
+func (instance mockedPih) GetGroupId() string {
+	panic("not implemented")
+}
+
+func (instance mockedPih) GetArtifactId() string {
+	panic("not implemented")
+}
+
+func (instance mockedPih) GetRelease() string {
+	panic("not implemented")
 }

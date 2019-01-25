@@ -44,15 +44,14 @@ func (instance *Contexts) Run() error {
 	return encoder.Encode(information)
 }
 
-func (instance *Contexts) toContextInformation(config clientcmd.ClientConfig, currentContext string) ([]contextInformation, error) {
+func (instance *Contexts) toContextInformation(config clientcmd.ClientConfig, currentContext string) (map[string]contextInformation, error) {
 	rc, err := config.RawConfig()
 	if err != nil {
 		return nil, err
 	}
-	var result []contextInformation
+	result := map[string]contextInformation{}
 	for name, context := range rc.Contexts {
 		info := contextInformation{
-			Name:     name,
 			User:     context.AuthInfo,
 			Selected: currentContext == name,
 		}
@@ -61,13 +60,12 @@ func (instance *Contexts) toContextInformation(config clientcmd.ClientConfig, cu
 			info.Cluster = context.Cluster
 			info.Server = cluster.Server
 		}
-		result = append(result, info)
+		result[name] = info
 	}
 	return result, nil
 }
 
 type contextInformation struct {
-	Name     string `yaml:"name,omitempty"`
 	Selected bool   `yaml:"selected,omitempty"`
 	Cluster  string `yaml:"cluster,omitempty"`
 	Server   string `yaml:"server,omitempty"`

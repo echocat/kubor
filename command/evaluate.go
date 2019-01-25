@@ -3,6 +3,7 @@ package command
 import (
 	"fmt"
 	"github.com/levertonai/kubor/common"
+	"github.com/levertonai/kubor/kubernetes/fixes"
 	"github.com/levertonai/kubor/model"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -49,8 +50,9 @@ func (instance *Evaluate) ConfigureCliCommands(context string, hc common.HasComm
 
 func (instance *Evaluate) RunWithArguments(arguments Arguments) error {
 	task := &evaluateTask{
-		source: instance,
-		first:  true,
+		source:  instance,
+		project: arguments.Project,
+		first:   true,
 	}
 	oh, err := model.NewObjectHandler(task.onObject)
 	if err != nil {
@@ -66,8 +68,9 @@ func (instance *Evaluate) RunWithArguments(arguments Arguments) error {
 }
 
 type evaluateTask struct {
-	source *Evaluate
-	first  bool
+	source  *Evaluate
+	project model.Project
+	first   bool
 }
 
 func (instance *evaluateTask) onObject(source string, object runtime.Object, unstructured *unstructured.Unstructured) error {
@@ -85,6 +88,11 @@ func (instance *evaluateTask) onObject(source string, object runtime.Object, uns
 	if instance.source.SourceHint {
 		fmt.Printf(sourceHintTemplate, source)
 	}
+
+	if err := fixes.FixForCreate(instance.project, unstructured); err != nil {
+		return err
+	}
+
 	encoder := json.NewYAMLSerializer(json.DefaultMetaFactory, scheme.Scheme, scheme.Scheme)
-	return encoder.Encode(object, os.Stdout)
+	return encoder.Encode(unstructured, os.Stdout)
 }

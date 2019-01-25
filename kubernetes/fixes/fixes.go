@@ -9,9 +9,15 @@ var (
 	createFixes []createFix
 )
 
-type updateFix func(original unstructured.Unstructured, target *unstructured.Unstructured) error
+type Project interface {
+	GetGroupId() string
+	GetArtifactId() string
+	GetRelease() string
+}
 
-type createFix func(target *unstructured.Unstructured) error
+type updateFix func(project Project, original unstructured.Unstructured, target *unstructured.Unstructured) error
+
+type createFix func(project Project, target *unstructured.Unstructured) error
 
 func registerUpdateFix(fix updateFix) {
 	updateFixes = append(updateFixes, fix)
@@ -21,18 +27,18 @@ func registerCreateFix(fix createFix) {
 	createFixes = append(createFixes, fix)
 }
 
-func FixForUpdate(original unstructured.Unstructured, target *unstructured.Unstructured) error {
+func FixForUpdate(project Project, original unstructured.Unstructured, target *unstructured.Unstructured) error {
 	for _, fix := range updateFixes {
-		if err := fix(original, target); err != nil {
+		if err := fix(project, original, target); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func FixForCreate(target *unstructured.Unstructured) error {
+func FixForCreate(project Project, target *unstructured.Unstructured) error {
 	for _, fix := range createFixes {
-		if err := fix(target); err != nil {
+		if err := fix(project, target); err != nil {
 			return err
 		}
 	}

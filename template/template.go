@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"io"
 	nt "text/template"
+	"text/template/parse"
 )
 
 type Template interface {
@@ -112,4 +113,26 @@ func (instance *Impl) newExecutionContext(data interface{}) (ExecutionContext, e
 		Factory:  instance.factory,
 		Data:     data,
 	}, nil
+}
+
+func IsLiteral(in string) bool {
+	tree := parse.New("")
+	if _, err := tree.Parse(in, "{{", "}}", map[string]*parse.Tree{}); err != nil {
+		return false
+	}
+	if tree.Root == nil {
+		return false
+	}
+	switch tree.Root.Type() {
+	case parse.NodeText:
+		return true
+	case parse.NodeList:
+		if tree.Root.Pos != 0 || len(tree.Root.Nodes) != 1 {
+			return false
+		}
+		subNode := tree.Root.Nodes[0]
+		return subNode.Type() == parse.NodeText
+	default:
+		return false
+	}
 }

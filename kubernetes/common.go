@@ -6,6 +6,16 @@ import (
 	"strconv"
 )
 
+type Project interface {
+	GetGroupId() string
+	GetArtifactId() string
+	GetRelease() string
+}
+
+type Kubor interface {
+	GetVersion() string
+}
+
 func GroupVersionKindToTypeMeta(kind schema.GroupVersionKind) metav1.TypeMeta {
 	return metav1.TypeMeta{
 		Kind:       kind.Kind,

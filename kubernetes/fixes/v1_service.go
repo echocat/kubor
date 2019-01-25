@@ -12,7 +12,7 @@ func init() {
 	registerUpdateFix(updateFixForV1ServiceIfResourceVersionIsAbsent)
 }
 
-func updateFixForV1ServiceIfClusterIpIsAbsent(original unstructured.Unstructured, target *unstructured.Unstructured) error {
+func updateFixForV1ServiceIfClusterIpIsAbsent(_ Project, original unstructured.Unstructured, target *unstructured.Unstructured) error {
 	if !groupVersionKindMatchesVersion(target, "v1") || !groupVersionKindMatchesKind(target, "service") {
 		return nil
 	}
@@ -43,7 +43,7 @@ func updateFixForV1ServiceIfClusterIpIsAbsent(original unstructured.Unstructured
 	return nil
 }
 
-func updateFixForV1ServiceIfResourceVersionIsAbsent(original unstructured.Unstructured, target *unstructured.Unstructured) error {
+func updateFixForV1ServiceIfResourceVersionIsAbsent(_ Project, original unstructured.Unstructured, target *unstructured.Unstructured) error {
 	if !groupVersionKindMatchesVersion(target, "v1") || !groupVersionKindMatchesKind(target, "service") {
 		return nil
 	}

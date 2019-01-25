@@ -21,7 +21,7 @@ type Apply interface {
 	String() string
 }
 
-func NewApplyObject(source string, object *unstructured.Unstructured, client dynamic.Interface, runtime Runtime) (*ApplyObject, error) {
+func NewApplyObject(source string, object *unstructured.Unstructured, client dynamic.Interface, runtime Runtime, project Project) (*ApplyObject, error) {
 	objectResource, err := GetObjectResource(object, client)
 	if err != nil {
 		return nil, err
@@ -33,6 +33,7 @@ func NewApplyObject(source string, object *unstructured.Unstructured, client dyn
 			WithField("object", objectResource),
 		object:  objectResource,
 		runtime: runtime,
+		project: project,
 	}, nil
 }
 
@@ -44,6 +45,7 @@ type ApplyObject struct {
 
 	applied *unstructured.Unstructured
 	runtime Runtime
+	project Project
 }
 
 func (instance ApplyObject) String() string {
@@ -74,7 +76,7 @@ func (instance *ApplyObject) Execute(dry DryRunOn) error {
 			Debug("%v does not exist - it will be created.", instance.object)
 		instance.original = nil
 
-		if err := fixes.FixForCreate(instance.object.Object); err != nil {
+		if err := fixes.FixForCreate(instance.project, instance.object.Object); err != nil {
 			return err
 		}
 
@@ -92,7 +94,7 @@ func (instance *ApplyObject) Execute(dry DryRunOn) error {
 			WithDeepFieldOn("response", original, l.IsDebugEnabled).
 			Debug("%v does exist - it will be updated.", instance.object)
 
-		if err := fixes.FixForUpdate(*original, instance.object.Object); err != nil {
+		if err := fixes.FixForUpdate(instance.project, *original, instance.object.Object); err != nil {
 			return err
 		}
 
@@ -355,6 +357,137 @@ func (instance *ApplyObject) Rollback() {
 	} else {
 		_, err = instance.original.Update(nil)
 	}
+}
+
+func NewDeleteObject(source string, original *unstructured.Unstructured, client dynamic.Interface, runtime Runtime, project Project) (*DeleteObject, error) {
+	originalResource, err := GetObjectResource(original, client)
+	if err != nil {
+		return nil, err
+	}
+
+	return &DeleteObject{
+		log: log.
+			WithField("source", source).
+			WithField("original", originalResource),
+		original: originalResource,
+		runtime:  runtime,
+		project:  project,
+	}, nil
+}
+
+type DeleteObject struct {
+	log log.Logger
+
+	original ObjectResource
+	deleted  bool
+
+	runtime Runtime
+	project Project
+}
+
+func (instance DeleteObject) String() string {
+	return instance.original.String()
+}
+
+func (instance *DeleteObject) Execute(dry DryRunOn) error {
+	if dry == ServerIfPossibleDryRun || dry == ServerDryRun {
+		if serverSidePossible, err := HasServerDryRunSupport(instance.original.Kind, instance.original.Client, instance.runtime); err != nil {
+			return err
+		} else if dry == ServerDryRun {
+			if !serverSidePossible {
+				return fmt.Errorf("%v does not support server side dry run", instance.original.Kind)
+			}
+		} else if serverSidePossible {
+			dry = ServerDryRun
+		} else {
+			dry = ClientDryRun
+		}
+	}
+
+	return instance.delete(dry)
+}
+
+func (instance *DeleteObject) Wait(timeout time.Duration) error {
+	// TODO! Currently we have no wait implemented here. We should do it in the future, too.
+	return nil
+}
+
+func (instance *DeleteObject) delete(dry DryRunOn) (err error) {
+	if instance.deleted {
+		return nil
+	}
+	start := time.Now()
+	l := instance.log.
+		WithField("action", "delete").
+		WithField("dryRunOn", dry)
+	defer func() {
+		ld := l.
+			WithField("duration", time.Now().Sub(start))
+		if err != nil {
+			ldd := ld.
+				WithError(err).
+				WithField("status", "failed")
+			if ldd.IsDebugEnabled() {
+				ldd.Error("Delete %v... FAILED!", instance.original)
+			} else {
+				ldd.Error("Could not delete %v.", instance.original)
+			}
+		} else {
+			ldd := ld.
+				WithField("status", "success")
+			if ldd.IsDebugEnabled() {
+				ldd.Info("Delete %v... SUCCESS!", instance.original)
+			} else {
+				ldd.Info("%v deleted.", instance.original)
+			}
+		}
+	}()
+	l.Debug("Delete %v...", instance.original)
+	opts := metav1.DeleteOptions{}
+	if dry == ServerDryRun {
+		opts.DryRun = []string{metav1.DryRunAll}
+	}
+	if dry != ClientDryRun {
+		if err = instance.original.Delete(&opts); err != nil {
+			instance.deleted = false
+			return
+		}
+	}
+	return
+}
+
+func (instance *DeleteObject) Rollback() {
+	if instance.deleted {
+		return
+	}
+	var err error
+	start := time.Now()
+	l := instance.log.WithField("action", "rollback")
+	defer func() {
+		instance.deleted = false
+		ld := l.
+			WithField("duration", time.Now().Sub(start))
+		if err != nil {
+			ldd := ld.
+				WithError(err).
+				WithField("status", "failed")
+			if ldd.IsDebugEnabled() {
+				ldd.Warn("Rollback %v... FAILED!", instance.original)
+			} else {
+				ldd.Warn("Could not rollback %v.", instance.original)
+			}
+		} else {
+			ldd := ld.
+				WithField("status", "success")
+			if ldd.IsDebugEnabled() {
+				ldd.Info("Rollback %v... SUCCESS!", instance.original)
+			} else {
+				ldd.Info("%v rolled back.", instance.original)
+			}
+		}
+	}()
+	l.Debug("Rollback %v...", instance.original)
+	_, err = instance.original.Create(nil)
 }
 
 type ApplySet []Apply
