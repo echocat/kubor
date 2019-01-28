@@ -1,6 +1,7 @@
 package model
 
 import (
+	"errors"
 	"fmt"
 	"github.com/levertonai/kubor/common"
 	"k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -9,6 +10,17 @@ import (
 	"reflect"
 	"regexp"
 	"strings"
+)
+
+var (
+	ErrEmptyGroupVersion = errors.New("apiVersion is empty")
+	ErrEmptyKind         = errors.New("kind is empty")
+	ErrEmptyKinds        = errors.New("no kind defined")
+	ErrEmptyNamespace    = errors.New("namespace is empty")
+	ErrEmptyNamespaces   = errors.New("no namespace defined")
+	ErrEmptyName         = errors.New("name is empty")
+	ErrEmptyNames        = errors.New("no name defined")
+	ErrEmptyClaims       = errors.New("no claim defined")
 )
 
 type VersionKind struct {
@@ -20,6 +32,14 @@ func (instance VersionKind) Matches(gvk schema.GroupVersionKind) bool {
 	return strings.ToLower(gvk.Group) == strings.ToLower(instance.Group()) &&
 		strings.ToLower(gvk.Version) == strings.ToLower(instance.Version()) &&
 		strings.ToLower(gvk.Kind) == strings.ToLower(instance.Kind)
+}
+
+func (instance VersionKind) ToGroupVersionKind() schema.GroupVersionKind {
+	return schema.GroupVersionKind{
+		Group:   instance.Group(),
+		Version: instance.Version(),
+		Kind:    instance.Kind,
+	}
 }
 
 func (instance VersionKind) Group() string {
@@ -45,6 +65,14 @@ func (instance VersionKind) eval(project Project) (result VersionKind, err error
 	if result.Kind, err = evaluateTemplate("claim.kind.kind", instance.Kind, project); err != nil {
 		return
 	}
+	if strings.TrimSpace(instance.GroupVersion) == "" {
+		err = ErrEmptyGroupVersion
+		return
+	}
+	if strings.TrimSpace(instance.Kind) == "" {
+		err = ErrEmptyKind
+		return
+	}
 	return
 }
 
@@ -54,8 +82,13 @@ func (instance VersionKinds) eval(project Project) (result VersionKinds, err err
 	result = make(VersionKinds, len(instance))
 	for i, part := range instance {
 		if result[i], err = part.eval(project); err != nil {
+			err = fmt.Errorf("kind[%d]: %v", i, err)
 			return
 		}
+	}
+	if len(result) == 0 {
+		err = ErrEmptyKinds
+		return
 	}
 	return
 }
@@ -74,6 +107,8 @@ type Namespace string
 func (instance Namespace) eval(project Project) (Namespace, error) {
 	if strResult, err := evaluateTemplate("claim.namespace", string(instance), project); err != nil {
 		return Namespace(""), err
+	} else if strings.TrimSpace(strResult) == "" {
+		return Namespace(""), ErrEmptyNamespace
 	} else {
 		return Namespace(strResult), nil
 	}
@@ -83,14 +118,23 @@ func (instance Namespace) Matches(namespace string) bool {
 	return strings.ToLower(string(instance)) == strings.ToLower(namespace)
 }
 
+func (instance Namespace) String() string {
+	return string(instance)
+}
+
 type Namespaces []Namespace
 
 func (instance Namespaces) eval(project Project) (result Namespaces, err error) {
 	result = make(Namespaces, len(instance))
 	for i, part := range instance {
 		if result[i], err = part.eval(project); err != nil {
+			err = fmt.Errorf("namespace[%d]: %v", i, err)
 			return
 		}
+	}
+	if len(result) == 0 {
+		err = ErrEmptyNamespaces
+		return
 	}
 	return
 }
@@ -118,9 +162,15 @@ func (instance Name) MarshalYAML() (interface{}, error) {
 	return instance.source, nil
 }
 
+func (instance Name) ToString() string {
+	return instance.source
+}
+
 func (instance Name) eval(project Project) (Name, error) {
 	if source, err := evaluateTemplate("claim.name", instance.source, project); err != nil {
 		return Name{}, err
+	} else if strings.TrimSpace(source) == "" {
+		return Name{}, ErrEmptyName
 	} else if pattern, err := regexp.Compile("^" + source + "$"); err != nil {
 		return Name{}, nil
 	} else {
@@ -146,8 +196,13 @@ func (instance Names) eval(project Project) (result Names, err error) {
 	result = make(Names, len(instance))
 	for i, part := range instance {
 		if result[i], err = part.eval(project); err != nil {
+			err = fmt.Errorf("namespace[%d]: %v", i, err)
 			return
 		}
+	}
+	if len(result) == 0 {
+		err = ErrEmptyNames
+		return
 	}
 	return
 }
@@ -223,14 +278,17 @@ func (instance ClaimDefinitions) ToClaims(project Project) (result Claims, _ err
 	result = Claims{}
 	for name, definition := range instance {
 		if matches, err := definition.On.Matches(project); err != nil {
-			return Claims{}, err
+			return Claims{}, fmt.Errorf("claim[%s]: %v", name, err)
 		} else if matches {
 			if claim, err := definition.Claim.eval(project); err != nil {
-				return Claims{}, err
+				return Claims{}, fmt.Errorf("claim[%s]: %v", name, err)
 			} else {
 				result[name] = claim
 			}
 		}
+	}
+	if len(result) == 0 {
+		return Claims{}, ErrEmptyClaims
 	}
 	return result, nil
 }

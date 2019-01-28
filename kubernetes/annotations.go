@@ -4,6 +4,7 @@ import (
 	"github.com/levertonai/kubor/kubernetes/fixes"
 	"github.com/levertonai/kubor/runtime"
 	"k8s.io/apimachinery/pkg/apis/meta/v1"
+	"time"
 )
 
 const (
@@ -12,6 +13,7 @@ const (
 	AnnotationKuborProjectGroupId    = AnnotationKuborPrefix + "/project-group-id"
 	AnnotationKuborProjectArtifactId = AnnotationKuborPrefix + "/project-artifact-id"
 	AnnotationKuborProjectRelease    = AnnotationKuborPrefix + "/project-release"
+	AnnotationKuborLastAppliedAt     = AnnotationKuborPrefix + "/lastAppliedAt"
 )
 
 func init() {
@@ -31,6 +33,7 @@ func SetKuborAnnotations(object v1.Object, project Project) error {
 	annotations[AnnotationKuborProjectGroupId] = project.GetGroupId()
 	annotations[AnnotationKuborProjectArtifactId] = project.GetArtifactId()
 	annotations[AnnotationKuborProjectRelease] = project.GetRelease()
+	annotations[AnnotationKuborLastAppliedAt] = time.Now().Format(time.RFC3339)
 
 	object.SetAnnotations(annotations)
 	return nil
@@ -47,6 +50,7 @@ func GetKuborAnnotations(object v1.Object) (KuborAnnotations, error) {
 type KuborAnnotations interface {
 	GetProject() Project
 	GetKubor() Kubor
+	GetLastAppliedAt() *time.Time
 }
 
 type annotationBasedBasedKuborAnnotations map[string]string
@@ -57,6 +61,18 @@ func (instance annotationBasedBasedKuborAnnotations) GetProject() Project {
 
 func (instance annotationBasedBasedKuborAnnotations) GetKubor() Kubor {
 	return annotationBasedBasedKubor(instance)
+}
+
+func (instance annotationBasedBasedKuborAnnotations) GetLastAppliedAt() *time.Time {
+	plain := instance[AnnotationKuborLastAppliedAt]
+	if plain == "" {
+		return nil
+	}
+	t, err := time.Parse(time.RFC3339, plain)
+	if err != nil {
+		return nil
+	}
+	return &t
 }
 
 type annotationBasedBasedProject map[string]string

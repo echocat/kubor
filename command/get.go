@@ -1,20 +1,19 @@
 package command
 
 import (
-	"fmt"
 	"github.com/levertonai/kubor/common"
 	"github.com/levertonai/kubor/kubernetes"
+	"github.com/levertonai/kubor/kubernetes/format"
 	"github.com/levertonai/kubor/model"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/serializer/json"
 	"k8s.io/client-go/dynamic"
-	"k8s.io/client-go/kubernetes/scheme"
 	"os"
 )
 
 func init() {
-	cmd := &Get{}
+	cmd := &Get{
+		Output: format.VariantTable,
+	}
 	cmd.Parent = cmd
 	RegisterInitializable(cmd)
 	common.RegisterCliFactory(cmd)
@@ -23,8 +22,8 @@ func init() {
 type Get struct {
 	Command
 
-	Predicate  common.EvaluatingPredicate
-	SourceHint bool
+	Output    format.Variant
+	Predicate common.EvaluatingPredicate
 }
 
 func (instance *Get) ConfigureCliCommands(context string, hc common.HasCommands) error {
@@ -35,14 +34,15 @@ func (instance *Get) ConfigureCliCommands(context string, hc common.HasCommands)
 	cmd := hc.Command("get", "Get the instances of this project using the provided values.").
 		Action(instance.ExecuteFromCli)
 
-	cmd.Flag("sourceHint", "Prints to the output a comment which indicates where the rendered content organically comes from.").
-		Envar("KUBOR_SOURCE_HINT").
-		Default(fmt.Sprint(instance.SourceHint)).
-		BoolVar(&instance.SourceHint)
 	cmd.Flag("predicate", "Filters every object that should be listed. Empty allows everything. Pattern: \"[!]<template>=<must match regex>\", Example: \"{{.spec.name}}=Foo.*\"").
 		Short('p').
 		Envar("KUBOR_PREDICATE").
 		SetValue(&instance.Predicate)
+	cmd.Flag("output", "Defines how to format the output. Could be: table, yaml or json").
+		Short('o').
+		Default(instance.Output.String()).
+		Envar("KUBOR_OUTPUT").
+		SetValue(&instance.Output)
 
 	return nil
 }
@@ -51,56 +51,38 @@ func (instance *Get) RunWithArguments(arguments Arguments) error {
 	task := &getTask{
 		source:        instance,
 		dynamicClient: arguments.DynamicClient,
-		first:         true,
+		claims:        &arguments.Project.Claims,
+		objects:       []runtime.Object{},
 	}
-	oh, err := model.NewObjectHandler(task.onObject)
-	if err != nil {
-		return err
+	for _, claim := range arguments.Project.Claims {
+		for _, kind := range claim.Kinds {
+			gvk := kind.ToGroupVersionKind()
+			for _, namespace := range claim.Namespaces {
+				if err := kubernetes.QueryNamespace(arguments.DynamicClient, gvk, namespace.String(), task.onObject); err != nil {
+					return err
+				}
+			}
+		}
 	}
 
-	cp, err := arguments.Project.RenderedTemplatesProvider()
-	if err != nil {
-		return err
-	}
-
-	return oh.Handle(cp)
+	return format.Provider.Format(instance.Output, os.Stdout, task.objects...)
 }
 
 type getTask struct {
 	source        *Get
+	claims        *model.Claims
 	dynamicClient dynamic.Interface
-	first         bool
+	objects       []runtime.Object
 }
 
-func (instance *getTask) onObject(source string, object runtime.Object, unstructured *unstructured.Unstructured) error {
-	if matches, err := instance.source.Predicate.Matches(unstructured.Object); err != nil {
-		return err
-	} else if !matches {
-		return nil
-	}
-
-	resource, err := kubernetes.GetObjectResource(unstructured, instance.dynamicClient)
-	if err != nil {
+func (instance *getTask) onObject(object runtime.Object) error {
+	if matches, err := instance.claims.Matches(object); err != nil || !matches {
 		return err
 	}
-	ul, err := resource.Get(nil)
-	if err != nil {
+	if matches, err := instance.source.Predicate.Matches(object); err != nil || !matches {
 		return err
 	}
 
-	if instance.first {
-		instance.first = false
-	} else {
-		fmt.Print("---\n")
-	}
-	if instance.source.SourceHint {
-		fmt.Printf(sourceHintTemplate, source)
-	}
-
-	if err := json.NewYAMLSerializer(json.DefaultMetaFactory, scheme.Scheme, scheme.Scheme).
-		Encode(ul, os.Stdout); err != nil {
-		return err
-	}
-
+	instance.objects = append(instance.objects, object)
 	return nil
 }

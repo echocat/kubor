@@ -31,7 +31,6 @@ func GetObjectPathValue(object interface{}, segments ...string) interface{} {
 }
 
 func getPropertyForFieldName(v reflect.Value, name string) reflect.Value {
-	t := v.Type()
 	for v.Kind() == reflect.Ptr {
 		if v.IsNil() {
 			return reflect.Value{}
@@ -44,6 +43,7 @@ func getPropertyForFieldName(v reflect.Value, name string) reflect.Value {
 	for v.Kind() == reflect.Interface {
 		v = v.Elem()
 	}
+	t := v.Type()
 	switch v.Kind() {
 	case reflect.Struct:
 		if field, ok := t.FieldByName(name); ok {
