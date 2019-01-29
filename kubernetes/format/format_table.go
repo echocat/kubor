@@ -41,8 +41,8 @@ func NewTableFormat() *TableFormat {
 			CellProvider: AggregationToAvailable,
 			Weight:       7000,
 		}, {
-			Label:        "Is ready",
-			CellProvider: AggregationToIsReady,
+			Label:        "Status",
+			CellProvider: AggregationToStatus,
 			Weight:       8000,
 		}},
 	}
@@ -141,6 +141,10 @@ func AggregationToIsReady(in kubernetes.Aggregation) (Cell, error) {
 	return PboolToCell(in.IsReady)
 }
 
+func AggregationToStatus(in kubernetes.Aggregation) (Cell, error) {
+	return PstringToCell(in.GetStatus)
+}
+
 func StringToCell(in string) (Cell, error) {
 	return StringCell{common.Pstring(in)}, nil
 }
@@ -151,4 +155,8 @@ func Pint32ToCell(getter func() *int32) (Cell, error) {
 
 func PboolToCell(getter func() *bool) (Cell, error) {
 	return BoolCell{getter()}, nil
+}
+
+func PstringToCell(getter func() *string) (Cell, error) {
+	return StringCell{getter()}, nil
 }

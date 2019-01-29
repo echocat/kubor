@@ -1,6 +1,8 @@
 package kubernetes
 
 import (
+	"fmt"
+	"github.com/levertonai/kubor/common"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -99,6 +101,12 @@ func TryCastToInt32(value interface{}) *int32 {
 		}
 	}
 	return Pint32(int32(0))
+}
+func TryCastToString(value interface{}) *string {
+	if value == nil {
+		return nil
+	}
+	return common.Pstring(fmt.Sprint(value))
 }
 
 func NormalizeGroupVersionKind(in schema.GroupVersionKind) schema.GroupVersionKind {

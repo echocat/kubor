@@ -35,6 +35,10 @@ func NewAggregationFor(object Object) Aggregation {
 		return DaemonSetAggregation{generic}
 	case "statefulset":
 		return StatefulSetAggregation{generic}
+	case "pod":
+		return PodAggregation{generic}
+	case "configmap":
+		return ConfigMapAggregation{generic}
 	}
 	return generic
 }
@@ -56,6 +60,10 @@ func (instance GenericAggregation) Interface(segments ...string) interface{} {
 
 func (instance GenericAggregation) TryInt32(segments ...string) *int32 {
 	return TryCastToInt32(instance.Interface(segments...))
+}
+
+func (instance GenericAggregation) TryString(segments ...string) *string {
+	return TryCastToString(instance.Interface(segments...))
 }
 
 func (instance GenericAggregation) GetDesired() *int32 {
@@ -200,4 +208,35 @@ func (instance StatefulSetAggregation) GetStatus() *string {
 	} else {
 		return common.Pstring("Not ready")
 	}
+}
+
+type PodAggregation struct {
+	GenericAggregation
+}
+
+func (instance PodAggregation) IsReady() *bool {
+	phase := instance.TryString("status", "phase")
+	return common.Pbool(phase != nil && strings.ToLower(*phase) == "running")
+}
+
+func (instance PodAggregation) GetStatus() *string {
+	phase := instance.TryString("status", "phase")
+	reason := instance.TryString("status", "reason")
+	if phase != nil && *phase != "" && reason != nil && *reason != "" {
+		return common.Pstring(*phase + ": " + *reason)
+	} else if phase != nil && *phase != "" {
+		return phase
+	} else if reason != nil && *reason != "" {
+		return reason
+	} else {
+		return nil
+	}
+}
+
+type ConfigMapAggregation struct {
+	GenericAggregation
+}
+
+func (instance ConfigMapAggregation) GetStatus() *string {
+	return common.Pstring("Exists")
 }
