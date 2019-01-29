@@ -1,59 +1,50 @@
 package format
 
 import (
-	"errors"
-	"fmt"
 	"github.com/levertonai/kubor/common"
 	"github.com/levertonai/kubor/kubernetes"
 	"github.com/olekukonko/tablewriter"
 	"io"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"strconv"
 )
 
-var (
-	ErrUnsupportedObject = errors.New("unsupported object")
-)
+var _ = MustRegister(VariantTable, NewTableFormat())
 
-func MustRegisterTableBasedObjectFormatOf(title string, kinds ...schema.GroupVersionKind) *TableFormatter {
-	result := MustNewTemplateBasedObjectFormatOf(title, kinds...)
-	Provider.MustRegister(VariantTable, result)
-	return result
-}
-
-func MustNewTemplateBasedObjectFormatOf(title string, kinds ...schema.GroupVersionKind) *TableFormatter {
-	if result, err := NewTemplateBasedObjectFormatOf(title, kinds...); err != nil {
-		panic(err)
-	} else {
-		return result
+func NewTableFormat() *TableFormat {
+	return &TableFormat{
+		Columns: []*TableColumn{{
+			Label:         "Kind",
+			CellFormatter: AggregationToGroupVersionKind,
+		}, {
+			Label:         "Name",
+			CellFormatter: AggregationToName,
+		}, {
+			Label:         "Namespace",
+			CellFormatter: AggregationToNamespace,
+		}, {
+			Label:         "Desired",
+			CellFormatter: AggregationToDesired,
+		}, {
+			Label:         "Ready",
+			CellFormatter: AggregationToReady,
+		}, {
+			Label:         "UpToDate",
+			CellFormatter: AggregationToUpToDate,
+		}, {
+			Label:         "Available",
+			CellFormatter: AggregationToAvailable,
+		}, {
+			Label:         "Is ready",
+			CellFormatter: AggregationToIsReady,
+		}},
 	}
 }
 
-func NewTemplateBasedObjectFormatOf(title string, kinds ...schema.GroupVersionKind) (*TableFormatter, error) {
-	return &TableFormatter{
-		Title:         title,
-		SupportedGvks: NormalizeGroupVersionKinds(kinds),
-		Columns:       []TableColumn{},
-	}, nil
-}
+type TableCellFormatter func(kubernetes.Aggregation) (*string, error)
+type TableFooterCellFormatter func(...kubernetes.Aggregation) (*string, error)
 
-type TableCellFormatter func(runtime.Object) (string, error)
-type TableFooterCellFormatter func(...runtime.Object) (string, error)
-
-type TableFormatter struct {
-	Title         string
-	Columns       []TableColumn
-	SupportedGvks []schema.GroupVersionKind
-}
-
-func (instance *TableFormatter) WithColumn(label string, formatter TableCellFormatter) *TableFormatter {
-	instance.Columns = append(instance.Columns, TableColumn{
-		Label:         label,
-		CellFormatter: formatter,
-	})
-	return instance
+type TableFormat struct {
+	Columns []*TableColumn
 }
 
 type TableColumn struct {
@@ -62,43 +53,28 @@ type TableColumn struct {
 	FooterFormatter TableFooterCellFormatter
 }
 
-func (instance TableFormatter) Supports(gvks ...schema.GroupVersionKind) bool {
-	if len(instance.SupportedGvks) == 0 {
-		return true
-	}
-	for _, gvk := range gvks {
-		if !instance.supports(gvk) {
-			return false
+func (instance *TableFormat) Format(to io.Writer, supplier ObjectSupplier) error {
+	columns := make(map[*TableColumn]bool)
+	var rows []*tableFormatRow
+	for {
+		if object, err := supplier(); err != nil {
+			return err
+		} else if object == nil {
+			break
+		} else if row, err := instance.newRowFor(object); err != nil {
+			return err
+		} else {
+			rows = append(rows, row)
+			for column := range row.cells {
+				columns[column] = true
+			}
 		}
-	}
-	return true
-}
-
-func (instance TableFormatter) supports(gvk schema.GroupVersionKind) bool {
-	for _, candidate := range instance.SupportedGvks {
-		if NormalizeGroupVersionKind(candidate) == gvk {
-			return true
-		}
-	}
-	return false
-}
-
-func (instance TableFormatter) Format(to io.Writer, objects ...runtime.Object) error {
-	if len(objects) == 0 {
-		return nil
-	}
-	title := instance.Title
-	if title == "" {
-		title = FormatGroupVersionKind(objects[0].GetObjectKind().GroupVersionKind())
-	}
-	if _, err := fmt.Fprintf(to, "%s\n", title); err != nil {
-		return err
 	}
 	t := tablewriter.NewWriter(to)
 	t.SetAlignment(tablewriter.ALIGN_LEFT)
-	t.SetHeader(instance.toHeader())
-	for _, object := range objects {
-		if row, err := instance.toRow(object); err != nil {
+	t.SetHeader(instance.toHeader(columns))
+	for _, row := range rows {
+		if row, err := instance.formatRow(row); err != nil {
 			return err
 		} else {
 			t.Append(row)
@@ -114,15 +90,40 @@ func (instance TableFormatter) Format(to io.Writer, objects ...runtime.Object) e
 	return err
 }
 
-func (instance TableFormatter) toHeader() []string {
-	result := make([]string, len(instance.Columns))
-	for i, column := range instance.Columns {
-		result[i] = column.Label
+func (instance *TableFormat) newRowFor(object kubernetes.Object) (*tableFormatRow, error) {
+	row := &tableFormatRow{
+		TableFormat: instance,
+		cells:       map[*TableColumn]*string{},
+	}
+	aggregation := kubernetes.NewAggregationFor(object)
+	for _, column := range instance.Columns {
+		if formatted, err := column.CellFormatter(aggregation); err != nil {
+			return nil, err
+		} else {
+			row.cells[column] = formatted
+		}
+	}
+	return row, nil
+}
+
+type tableFormatRow struct {
+	*TableFormat
+	cells map[*TableColumn]*string
+}
+
+func (instance TableFormat) toHeader(columns map[*TableColumn]bool) []string {
+	result := make([]string, len(columns))
+	var i int
+	for _, column := range instance.Columns {
+		if columns[column] {
+			result[i] = column.Label
+			i++
+		}
 	}
 	return result
 }
 
-func (instance TableFormatter) toFooter(objects ...runtime.Object) ([]string, error) {
+func (instance TableFormat) toFooter(objects ...kubernetes.Object) ([]string, error) {
 	atLeastOneFooterFound := false
 	result := make([]string, len(instance.Columns))
 	for i, column := range instance.Columns {
@@ -141,7 +142,7 @@ func (instance TableFormatter) toFooter(objects ...runtime.Object) ([]string, er
 	return result, nil
 }
 
-func (instance TableFormatter) toRow(object runtime.Object) ([]string, error) {
+func (instance TableFormat) formatRow(object kubernetes.Object) ([]string, error) {
 	result := make([]string, len(instance.Columns))
 	var i int
 	for _, column := range instance.Columns {
@@ -155,66 +156,52 @@ func (instance TableFormatter) toRow(object runtime.Object) ([]string, error) {
 	return result, nil
 }
 
-func (instance TableFormatter) ShouldBeCombined() bool {
-	return true
+func AggregationToGroupVersionKind(a kubernetes.Aggregation) (*string, error) {
+	return common.Pstring(kubernetes.FormatGroupVersionKind(a.GroupVersionKind())), nil
 }
 
-func ObjectPathFormatter(path ...string) TableCellFormatter {
-	return func(object runtime.Object) (string, error) {
-		var val interface{}
-		if u, ok := object.(runtime.Unstructured); ok {
-			val = common.GetObjectPathValue(u.UnstructuredContent(), path...)
-		} else {
-			val = common.GetObjectPathValue(object, path...)
-		}
-		return fmt.Sprint(val), nil
-	}
+func AggregationToName(a kubernetes.Aggregation) (*string, error) {
+	return common.Pstring(a.GetName()), nil
 }
 
-func AggregationFormatter(mapper func(kubernetes.Aggregation) (string, error)) TableCellFormatter {
-	return func(object runtime.Object) (string, error) {
-		if u, ok := object.(*unstructured.Unstructured); ok {
-			aggregation := kubernetes.NewAggregationFor(u)
-			return mapper(aggregation)
-		}
-		return "", ErrUnsupportedObject
-	}
+func AggregationToNamespace(a kubernetes.Aggregation) (*string, error) {
+	return common.Pstring(a.GetNamespace()), nil
 }
 
-func AggregationToDesired(in kubernetes.Aggregation) (string, error) {
-	return Pint32ToString(in.Desired)
+func AggregationToDesired(in kubernetes.Aggregation) (*string, error) {
+	return Pint32ToString(in.GetDesired)
 }
 
-func AggregationToReady(in kubernetes.Aggregation) (string, error) {
-	return Pint32ToString(in.Ready)
+func AggregationToReady(in kubernetes.Aggregation) (*string, error) {
+	return Pint32ToString(in.GetReady)
 }
 
-func AggregationToUpToDate(in kubernetes.Aggregation) (string, error) {
-	return Pint32ToString(in.UpToDate)
+func AggregationToUpToDate(in kubernetes.Aggregation) (*string, error) {
+	return Pint32ToString(in.GetUpToDate)
 }
 
-func AggregationToAvailable(in kubernetes.Aggregation) (string, error) {
-	return Pint32ToString(in.Available)
+func AggregationToAvailable(in kubernetes.Aggregation) (*string, error) {
+	return Pint32ToString(in.GetAvailable)
 }
 
-func AggregationToIsReady(in kubernetes.Aggregation) (string, error) {
+func AggregationToIsReady(in kubernetes.Aggregation) (*string, error) {
 	return PboolToString(in.IsReady)
 }
 
-func Pint32ToString(getter func() *int32) (string, error) {
+func Pint32ToString(getter func() *int32) (*string, error) {
 	if val := getter(); val != nil {
-		return strconv.FormatInt(int64(*val), 10), nil
+		return common.Pstring(strconv.FormatInt(int64(*val), 10)), nil
 	} else {
-		return "n/a", nil
+		return nil, nil
 	}
 }
 
-func PboolToString(getter func() *bool) (string, error) {
+func PboolToString(getter func() *bool) (*string, error) {
 	if val := getter(); val == nil {
-		return "n/a", nil
+		return nil, nil
 	} else if *val {
-		return "Yes", nil
+		return common.Pstring("Yes"), nil
 	} else {
-		return "No", nil
+		return common.Pstring("No"), nil
 	}
 }

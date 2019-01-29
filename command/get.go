@@ -65,7 +65,7 @@ func (instance *Get) RunWithArguments(arguments Arguments) error {
 		}
 	}
 
-	return format.Provider.Format(instance.Output, os.Stdout, task.objects...)
+	return format.DefaultFormats.Format(instance.Output, os.Stdout, task.objects...)
 }
 
 type getTask struct {

@@ -2,14 +2,28 @@ package kubernetes
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"strconv"
+	"strings"
 )
 
 type Project interface {
 	GetGroupId() string
 	GetArtifactId() string
 	GetRelease() string
+}
+
+type Object interface {
+	runtime.Object
+	GroupVersionKind() schema.GroupVersionKind
+	GetName() string
+	GetNamespace() string
+}
+
+type Unstructured interface {
+	Object
+	UnstructuredContent() map[string]interface{}
 }
 
 type Kubor interface {
@@ -85,4 +99,32 @@ func TryCastToInt32(value interface{}) *int32 {
 		}
 	}
 	return Pint32(int32(0))
+}
+
+func NormalizeGroupVersionKind(in schema.GroupVersionKind) schema.GroupVersionKind {
+	return schema.GroupVersionKind{
+		Group:   strings.ToLower(in.Group),
+		Version: strings.ToLower(in.Version),
+		Kind:    strings.ToLower(in.Kind),
+	}
+}
+
+func NormalizeGroupVersionKinds(in []schema.GroupVersionKind) []schema.GroupVersionKind {
+	result := make([]schema.GroupVersionKind, len(in))
+	for i, val := range in {
+		result[i] = NormalizeGroupVersionKind(val)
+	}
+	return result
+}
+
+func FormatGroupVersionKind(in schema.GroupVersionKind) string {
+	toFormat := NormalizeGroupVersionKind(in)
+	result := toFormat.Kind
+	if toFormat.Version != "" {
+		result = toFormat.Version + "." + result
+	}
+	if toFormat.Group != "" {
+		result = toFormat.Group + "/" + result
+	}
+	return result
 }

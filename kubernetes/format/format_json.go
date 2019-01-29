@@ -3,41 +3,36 @@ package format
 import (
 	"io"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/runtime/serializer/json"
 	"k8s.io/client-go/kubernetes/scheme"
 )
 
-var _ = Provider.MustRegister(VariantJson, &JsonFormat{
-	Scheme:      scheme.Scheme,
-	MetaFactory: json.DefaultMetaFactory,
-})
+var _ = MustRegister(VariantJson, NewJsonFormat())
+
+func NewJsonFormat() *JsonFormat {
+	return &JsonFormat{
+		Encoder: json.NewSerializer(json.DefaultMetaFactory, scheme.Scheme, scheme.Scheme, true),
+	}
+}
 
 type JsonFormat struct {
-	Scheme      *runtime.Scheme
-	MetaFactory json.MetaFactory
+	Encoder runtime.Encoder
 }
 
-func (instance JsonFormat) Supports(gvks ...schema.GroupVersionKind) bool {
-	for _, gvk := range gvks {
-		if !instance.Scheme.Recognizes(gvk) {
-			return false
+func (instance JsonFormat) Format(to io.Writer, supplier ObjectSupplier) error {
+	first := true
+	for {
+		object, err := supplier()
+		if err != nil || object == nil {
+			return err
 		}
-	}
-	return true
-}
-
-func (instance JsonFormat) Format(to io.Writer, objects ...runtime.Object) error {
-	for i, object := range objects {
-		if i > 0 {
-			if _, err := to.Write([]byte("\n---\n")); err != nil {
-				return err
-			}
+		if first {
+			first = false
+		} else if _, err := to.Write([]byte("\n---\n")); err != nil {
+			return err
 		}
-		if err := json.NewSerializer(instance.MetaFactory, instance.Scheme, instance.Scheme, true).
-			Encode(object, to); err != nil {
+		if err := instance.Encoder.Encode(object, to); err != nil {
 			return err
 		}
 	}
-	return nil
 }
