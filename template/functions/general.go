@@ -6,8 +6,8 @@ import (
 	"strings"
 )
 
-var FuncOptional = Function{
-	Description: "Asks the given <holder> if a property of given <name> exists and returns it. Otherwise the result is <nil>.",
+var FuncDefault = Function{
+	Description: "If <given> is empty it will return <defaultValue>.",
 	Parameters: Parameters{{
 		Name: "defaultValue",
 	}, {
@@ -36,7 +36,7 @@ var FuncIsNotEmpty = Function{
 	return !empty(given)
 })
 
-var FuncDefault = Function{
+var FuncOptional = Function{
 	Description: "Asks the given <holder> if a property of given <name> exists and returns it. Otherwise the result is <nil>.",
 	Parameters: Parameters{{
 		Name: "name",
@@ -45,7 +45,6 @@ var FuncDefault = Function{
 	}},
 }.MustWithFunc(func(name string, holder interface{}) (interface{}, error) {
 	v := reflect.ValueOf(holder)
-	t := v.Type()
 	for v.Kind() == reflect.Ptr {
 		v = v.Elem()
 	}
@@ -55,6 +54,7 @@ var FuncDefault = Function{
 	for v.Kind() == reflect.Interface {
 		v = v.Elem()
 	}
+	t := v.Type()
 	switch v.Kind() {
 	case reflect.Struct:
 		if field, ok := t.FieldByName(name); ok {
@@ -100,27 +100,33 @@ var CategoryGeneral = Category{
 }
 
 func empty(given interface{}) bool {
-	g := reflect.ValueOf(given)
-	if !g.IsValid() {
+	if given == nil {
 		return true
+	}
+	v := reflect.ValueOf(given)
+	if !v.IsValid() {
+		return true
+	}
+	for v.Kind() == reflect.Ptr {
+		v = v.Elem()
 	}
 
 	// Basically adapted from text/template.isTrue
-	switch g.Kind() {
+	switch v.Kind() {
 	default:
-		return g.IsNil()
+		return v.IsNil()
 	case reflect.Array, reflect.Slice, reflect.Map, reflect.String:
-		return g.Len() == 0
+		return v.Len() == 0
 	case reflect.Bool:
-		return g.Bool() == false
+		return v.Bool() == false
 	case reflect.Complex64, reflect.Complex128:
-		return g.Complex() == 0
+		return v.Complex() == 0
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-		return g.Int() == 0
+		return v.Int() == 0
 	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
-		return g.Uint() == 0
+		return v.Uint() == 0
 	case reflect.Float32, reflect.Float64:
-		return g.Float() == 0
+		return v.Float() == 0
 	case reflect.Struct:
 		return false
 	}

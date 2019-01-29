@@ -64,6 +64,7 @@ func (instance *Impl) Execute(data interface{}, target io.Writer) error {
 		return err
 	} else {
 		return clone.
+			Option("missingkey=error").
 			Funcs(funcMap).
 			Execute(target, data)
 	}

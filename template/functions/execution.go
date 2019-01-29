@@ -74,6 +74,9 @@ func (instance Function) createExecutionArguments(ft reflect.Type, context templ
 }
 
 func (instance Function) createExecutionArgument(index int, ft reflect.Type, pt reflect.Type, arg interface{}) (reflect.Value, error) {
+	if arg == nil {
+		return reflect.New(pt), nil
+	}
 	av := reflect.ValueOf(arg)
 	at := av.Type()
 	if !at.AssignableTo(pt) {
