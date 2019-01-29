@@ -1,6 +1,7 @@
 package format
 
 import (
+	"github.com/levertonai/kubor/kubernetes"
 	"io"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer/json"
@@ -19,20 +20,29 @@ type JsonFormat struct {
 	Encoder runtime.Encoder
 }
 
-func (instance JsonFormat) Format(to io.Writer, supplier ObjectSupplier) error {
-	first := true
-	for {
-		object, err := supplier()
-		if err != nil || object == nil {
-			return err
-		}
-		if first {
-			first = false
-		} else if _, err := to.Write([]byte("\n---\n")); err != nil {
-			return err
-		}
-		if err := instance.Encoder.Encode(object, to); err != nil {
-			return err
-		}
+func (instance JsonFormat) Format(to io.Writer) (Task, error) {
+	return &jsonTask{
+		JsonFormat: instance,
+		to:         to,
+		first:      true,
+	}, nil
+}
+
+type jsonTask struct {
+	JsonFormat
+	to    io.Writer
+	first bool
+}
+
+func (instance *jsonTask) Next(object kubernetes.Object) error {
+	if instance.first {
+		instance.first = false
+	} else if _, err := instance.to.Write([]byte("\n---\n")); err != nil {
+		return err
 	}
+	return instance.Encoder.Encode(object, instance.to)
+}
+
+func (instance *jsonTask) Close() error {
+	return nil
 }

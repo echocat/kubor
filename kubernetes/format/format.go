@@ -13,7 +13,12 @@ var (
 type ObjectSupplier func() (kubernetes.Object, error)
 
 type Format interface {
-	Format(to io.Writer, supplier ObjectSupplier) error
+	Format(to io.Writer) (Task, error)
+}
+
+type Task interface {
+	io.Closer
+	Next(kubernetes.Object) error
 }
 
 type Formats interface {

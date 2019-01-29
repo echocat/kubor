@@ -5,7 +5,6 @@ import (
 	"github.com/levertonai/kubor/kubernetes"
 	"github.com/levertonai/kubor/kubernetes/format"
 	"github.com/levertonai/kubor/model"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/dynamic"
 	"os"
 )
@@ -48,34 +47,41 @@ func (instance *Get) ConfigureCliCommands(context string, hc common.HasCommands)
 }
 
 func (instance *Get) RunWithArguments(arguments Arguments) error {
-	task := &getTask{
-		source:        instance,
-		dynamicClient: arguments.DynamicClient,
-		claims:        &arguments.Project.Claims,
-		objects:       []runtime.Object{},
-	}
-	for _, claim := range arguments.Project.Claims {
-		for _, kind := range claim.Kinds {
-			gvk := kind.ToGroupVersionKind()
-			for _, namespace := range claim.Namespaces {
-				if err := kubernetes.QueryNamespace(arguments.DynamicClient, gvk, namespace.String(), task.onObject); err != nil {
-					return err
+	if f, err := format.Get(instance.Output); err != nil {
+		return err
+	} else if ft, err := f.Format(os.Stdout); err != nil {
+		return err
+	} else {
+		task := &getTask{
+			source:        instance,
+			dynamicClient: arguments.DynamicClient,
+			claims:        &arguments.Project.Claims,
+			formatTask:    ft,
+		}
+		defer ft.Close()
+
+		for _, claim := range arguments.Project.Claims {
+			for _, kind := range claim.Kinds {
+				gvk := kind.ToGroupVersionKind()
+				for _, namespace := range claim.Namespaces {
+					if err := kubernetes.QueryNamespace(arguments.DynamicClient, gvk, namespace.String(), task.onObject); err != nil {
+						return err
+					}
 				}
 			}
 		}
+		return nil
 	}
-
-	return format.DefaultFormats.Format(instance.Output, os.Stdout, task.objects...)
 }
 
 type getTask struct {
 	source        *Get
 	claims        *model.Claims
 	dynamicClient dynamic.Interface
-	objects       []runtime.Object
+	formatTask    format.Task
 }
 
-func (instance *getTask) onObject(object runtime.Object) error {
+func (instance *getTask) onObject(object kubernetes.Object) error {
 	if matches, err := instance.claims.Matches(object); err != nil || !matches {
 		return err
 	}
@@ -83,6 +89,5 @@ func (instance *getTask) onObject(object runtime.Object) error {
 		return err
 	}
 
-	instance.objects = append(instance.objects, object)
-	return nil
+	return instance.formatTask.Next(object)
 }
