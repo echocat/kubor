@@ -2,10 +2,12 @@ package kubernetes
 
 import (
 	"github.com/levertonai/kubor/common"
+	"k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"strings"
+	"time"
 )
 
 func IsReady(object runtime.Object) *bool {
@@ -23,6 +25,7 @@ type Aggregation interface {
 	GetAvailable() *int32
 	IsReady() *bool
 	GetStatus() *string
+	GetAge() *time.Duration
 }
 
 func NewAggregationFor(object Object) Aggregation {
@@ -47,8 +50,19 @@ type GenericAggregation struct {
 	Object
 }
 
+type v1MetaData interface {
+	GetCreationTimestamp() v1.Time
+}
+
 func (instance GenericAggregation) GroupVersionKind() schema.GroupVersionKind {
 	return NormalizeGroupVersionKind(instance.Object.GroupVersionKind())
+}
+
+func (instance GenericAggregation) GetAge() *time.Duration {
+	if v1md, ok := instance.Object.(v1MetaData); ok {
+		return common.PtimeDuration(time.Now().Sub(v1md.GetCreationTimestamp().Time))
+	}
+	return nil
 }
 
 func (instance GenericAggregation) Interface(segments ...string) interface{} {

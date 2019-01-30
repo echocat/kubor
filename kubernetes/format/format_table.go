@@ -6,6 +6,7 @@ import (
 	"github.com/olekukonko/tablewriter"
 	"io"
 	"sort"
+	"time"
 )
 
 var _ = MustRegister(VariantTable, NewTableFormat())
@@ -44,6 +45,10 @@ func NewTableFormat() *TableFormat {
 			Label:        "Status",
 			CellProvider: AggregationToStatus,
 			Weight:       8000,
+		}, {
+			Label:        "Age",
+			CellProvider: AggregationToAge,
+			Weight:       9000,
 		}},
 	}
 }
@@ -145,6 +150,10 @@ func AggregationToStatus(in kubernetes.Aggregation) (Cell, error) {
 	return PstringToCell(in.GetStatus)
 }
 
+func AggregationToAge(in kubernetes.Aggregation) (Cell, error) {
+	return PdurationToCell(in.GetAge)
+}
+
 func StringToCell(in string) (Cell, error) {
 	return StringCell{common.Pstring(in)}, nil
 }
@@ -159,4 +168,8 @@ func PboolToCell(getter func() *bool) (Cell, error) {
 
 func PstringToCell(getter func() *string) (Cell, error) {
 	return StringCell{getter()}, nil
+}
+
+func PdurationToCell(getter func() *time.Duration) (Cell, error) {
+	return DurationCell{getter()}, nil
 }

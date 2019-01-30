@@ -3,7 +3,6 @@ package format
 import (
 	"fmt"
 	"github.com/levertonai/kubor/common"
-	"math"
 	"sort"
 	"strconv"
 	"time"
@@ -274,17 +273,19 @@ func (instance DurationCell) Formatted() *string {
 	if instance.Content == nil {
 		return nil
 	}
+	var result string
 	d := *instance.Content
 	if d < time.Minute {
-		return common.Pstring(d.Truncate(time.Second).String())
+		result = fmt.Sprintf("%.0fs", d.Seconds())
 	} else if d < time.Hour {
-		return common.Pstring(d.Truncate(time.Minute).String())
+		result = fmt.Sprintf("%.0fm", d.Minutes())
 	} else if d < (time.Hour * 24) {
-		return common.Pstring(d.Truncate(time.Hour).String())
+		result = fmt.Sprintf("%.0fh", d.Hours())
 	} else {
-		days := math.Abs(d.Hours() / 24.0)
-		return common.Pstring(fmt.Sprintf("%fd", days))
+		days := d.Hours() / 24.0
+		result = fmt.Sprintf("%.0fd", days)
 	}
+	return common.Pstring(result)
 }
 
 func (instance DurationCell) IsBlank() bool {
