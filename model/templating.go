@@ -16,8 +16,8 @@ type Templating struct {
 func newTemplating() Templating {
 	return Templating{
 		TemplateFilePattern: []string{
-			"?{{ .Root }}/kubernetes/templates/*.yaml",
 			"?{{ .Root }}/kubernetes/templates/*.yml",
+			"?{{ .Root }}/kubernetes/templates/*.yaml",
 		},
 	}
 }

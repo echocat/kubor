@@ -47,6 +47,23 @@ func (instance DryRunOn) IsEnabled() bool {
 	}
 }
 
+func (instance DryRunOn) Resolve(gvk schema.GroupVersionKind, client dynamic.Interface, runtime Runtime) (DryRunOn, error) {
+	if instance == ServerIfPossibleDryRun || instance == ServerDryRun {
+		if serverSidePossible, err := HasServerDryRunSupport(gvk, client, runtime); err != nil {
+			return DryRunOn(""), err
+		} else if instance == ServerDryRun {
+			if !serverSidePossible {
+				return DryRunOn(""), fmt.Errorf("%v does not support server side dry run", gvk)
+			}
+		} else if serverSidePossible {
+			return ServerDryRun, nil
+		} else {
+			return ClientDryRun, nil
+		}
+	}
+	return instance, nil
+}
+
 func (instance *DryRunOn) Get() interface{} {
 	return instance
 }

@@ -50,23 +50,16 @@ func (instance ApplyObject) String() string {
 	return instance.object.String()
 }
 
-func (instance *ApplyObject) Execute(dry DryRunOn) error {
-	if dry == ServerIfPossibleDryRun || dry == ServerDryRun {
-		if serverSidePossible, err := HasServerDryRunSupport(instance.object.Kind, instance.object.Client, instance.runtime); err != nil {
-			return err
-		} else if dry == ServerDryRun {
-			if !serverSidePossible {
-				return fmt.Errorf("%v does not support server side dry run", instance.object.Kind)
-			}
-		} else if serverSidePossible {
-			dry = ServerDryRun
-		} else {
-			dry = ClientDryRun
-		}
+func (instance *ApplyObject) resolveDryRunOn(dry DryRunOn) (DryRunOn, error) {
+	return dry.Resolve(instance.object.Kind, instance.object.Client, instance.runtime)
+}
+
+func (instance *ApplyObject) Execute(dry DryRunOn) (err error) {
+	if dry, err = instance.resolveDryRunOn(dry); err != nil {
+		return err
 	}
 	l := instance.log.
 		WithField("action", "checkExistence")
-	var err error
 	original, err := instance.object.Get(nil)
 	if errors.IsNotFound(err) {
 		l.
@@ -307,7 +300,6 @@ func (instance *ApplyObject) matchesReferenceOfObjectToApply(runtimeObject runti
 
 		return true
 	}
-
 }
 
 func (instance *ApplyObject) getGenerationOf(runtimeObject runtime.Object) *int64 {
@@ -368,7 +360,7 @@ func (instance *ApplySet) Add(apply Apply) {
 
 func (instance ApplySet) Execute(dry DryRunOn) (err error) {
 	defer func() {
-		if err != nil && !dry.IsEnabled() {
+		if err != nil && dry == NowhereDryRun {
 			instance.Rollback()
 		}
 	}()

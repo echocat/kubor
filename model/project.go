@@ -82,31 +82,32 @@ func NewProjectFactory() *ProjectFactory {
 }
 
 func (instance *ProjectFactory) Create(runtime kubernetes.Runtime) (Project, error) {
-	var err error
 	result := newProject()
 	result.Context = runtime.ContextName
 
-	if f, err := os.Open(instance.source); os.IsNotExist(err) {
+	if source, err := instance.resolveSource(); os.IsNotExist(err) {
 		if instance.sourceRequired {
 			return Project{}, fmt.Errorf("could not find source file '%s'", instance.source)
 		}
 	} else if err != nil {
 		return Project{}, fmt.Errorf("cannot open source file '%s': %v", instance.source, err)
+	} else if f, err := os.Open(source); err != nil {
+		return Project{}, fmt.Errorf("cannot open source file '%s': %v", source, err)
 	} else {
 		//noinspection GoUnhandledErrorResult
 		defer f.Close()
 		if err := yaml.NewDecoder(f).Decode(&result); err != nil {
-			return Project{}, fmt.Errorf("cannot read source file '%s': %v", instance.source, err)
+			return Project{}, fmt.Errorf("cannot read source file '%s': %v", source, err)
 		} else if err := result.Validate(); err != nil {
-			return Project{}, fmt.Errorf("cannot read source file '%s': %v", instance.source, err)
+			return Project{}, fmt.Errorf("cannot read source file '%s': %v", source, err)
 		}
-	}
 
-	if result, err = instance.populateStage1(result); err != nil {
-		return Project{}, err
-	}
-	if result, err = instance.populateStage2(result); err != nil {
-		return Project{}, err
+		if result, err = instance.populateStage1(source, result); err != nil {
+			return Project{}, err
+		}
+		if result, err = instance.populateStage2(result); err != nil {
+			return Project{}, err
+		}
 	}
 
 	if log.IsDebugEnabled() {
@@ -134,9 +135,40 @@ func (instance *ProjectFactory) Create(runtime kubernetes.Runtime) (Project, err
 	return result, nil
 }
 
-func (instance *ProjectFactory) populateStage1(input Project) (Project, error) {
+func (instance *ProjectFactory) resolveSource() (string, error) {
+	if _, err := os.Stat(instance.source); err == nil {
+		return instance.source, nil
+	} else if os.IsNotExist(err) {
+		var alternative string
+		for i := len(instance.source) - 1; i >= 0 && !os.IsPathSeparator(instance.source[i]); i-- {
+			if instance.source[i] == '.' {
+				switch instance.source[i:] {
+				case ".yml":
+					alternative = instance.source[:i] + ".yaml"
+				case ".yaml":
+					alternative = instance.source[:i] + ".yml"
+				}
+				break
+			}
+		}
+		if alternative == "" {
+			return "", err
+		}
+		if _, aErr := os.Stat(alternative); aErr == nil {
+			return alternative, nil
+		} else if os.IsNotExist(aErr) {
+			return "", err
+		} else {
+			return "", aErr
+		}
+	} else {
+		return "", err
+	}
+}
+
+func (instance *ProjectFactory) populateStage1(source string, input Project) (Project, error) {
 	result := input
-	result.Source = instance.source
+	result.Source = source
 	result.Root = filepath.Dir(result.Source)
 	result.Values = Values{}
 	for k, v := range instance.values {
@@ -173,7 +205,7 @@ func (instance *ProjectFactory) populateStage2(input Project) (Project, error) {
 
 func (instance *ProjectFactory) ConfigureFlags(hf common.HasFlags) {
 	hf.Flag("source", "Specifies the location of the kubor source file.").
-		Default(".kubor.yaml").
+		Default(".kubor.yml").
 		Envar("KUBOR_SOURCE").
 		PlaceHolder("<source file>").
 		StringVar(&instance.source)
