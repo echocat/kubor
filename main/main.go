@@ -46,7 +46,6 @@ func main() {
 	}
 
 	app := kingpin.New("kubor", "Safely bringing repositories using templating and charting inside CI/CD pipelines to Kubernetes.").
-		Version(extVersion).
 		ErrorWriter(os.Stderr).
 		UsageWriter(os.Stderr).
 		PreAction(func(_ *kingpin.ParseContext) error {

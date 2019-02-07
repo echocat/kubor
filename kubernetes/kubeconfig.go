@@ -1,8 +1,8 @@
 package kubernetes
 
 import (
+	"errors"
 	"fmt"
-	"github.com/googleapis/gnostic/OpenAPIv2"
 	"github.com/imdario/mergo"
 	"github.com/levertonai/kubor/common"
 	"github.com/levertonai/kubor/log"
@@ -29,20 +29,11 @@ var (
 	kubeContext    string
 )
 
-type Runtime struct {
-	Config      *restclient.Config
-	ContextName string
-
-	discoveryClient *discovery.CachedDiscoveryClient
-}
-
-func (instance Runtime) OpenAPISchema() (*openapi_v2.Document, error) {
-	return instance.discoveryClient.OpenAPISchema()
-}
-
 func ConfigureKubeConfigFlags(hf common.HasFlags) {
 	hf.Flag("kubeconfig", "Path to the kubeconfig file. Optionally you can provide the content of the kubeconfig using"+
-		" environment variable KUBE_CONFIG.").
+		" environment variable KUBE_CONFIG."+
+		" If this value is 'mock' it will use a kubeconfig which cannot do deployments but works with every named context"+
+		"; --context is in this case mandatory.").
 		Envar("KUBOR_KUBECONFIG").
 		PlaceHolder("<kube config file>").
 		StringVar(&kubeConfigPath)
@@ -54,27 +45,23 @@ func ConfigureKubeConfigFlags(hf common.HasFlags) {
 }
 
 func NewRuntime() (Runtime, error) {
+	if kubeConfigPath == "mock" {
+		if kubeContext == "" {
+			return nil, errors.New("if --kubeconfig=mock specified --context=<context> is required")
+		}
+		return newRuntimeMock(kubeContext)
+	}
 	clientConfig, contextName, err := NewKubeClientConfig()
 	if err != nil {
-		return Runtime{}, err
+		return nil, err
 	}
-	config, err := clientConfig.ClientConfig()
-	if err != nil {
-		return Runtime{}, err
-	}
-	dc, err := newDiscoveryClientFor(config)
-	if err != nil {
-		return Runtime{}, err
-	}
-	return Runtime{
-		Config:      config,
-		ContextName: contextName,
-
-		discoveryClient: dc,
-	}, nil
+	return newRuntimeImpl(clientConfig, contextName)
 }
 
 func NewKubeClientConfig() (clientcmd.ClientConfig, string, error) {
+	if kubeConfigPath == "mock" {
+		return nil, "", errors.New("this operation is not supported if --kubeconfig=mock was specified")
+	}
 	selectedContext := kubeContext
 	result := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(
 		&kubeConfigLoader{},

@@ -69,6 +69,7 @@ func (instance Project) RenderedTemplateFile(file string, writer io.Writer) erro
 }
 
 type ProjectFactory struct {
+	kubernetes.Runtime
 	source         string
 	sourceRequired bool
 	values         Values
@@ -83,7 +84,7 @@ func NewProjectFactory() *ProjectFactory {
 
 func (instance *ProjectFactory) Create(runtime kubernetes.Runtime) (Project, error) {
 	result := newProject()
-	result.Context = runtime.ContextName
+	result.Context = runtime.ContextName()
 
 	if source, err := instance.resolveSource(); os.IsNotExist(err) {
 		if instance.sourceRequired {

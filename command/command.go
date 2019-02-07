@@ -44,7 +44,7 @@ func (instance *Command) Run() error {
 	if err != nil {
 		return err
 	}
-	dc, err := dynamic.NewForConfig(runtime.Config)
+	dc, err := runtime.NewDynamicClient()
 	if err != nil {
 		return err
 	}
