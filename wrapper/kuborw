@@ -1,0 +1,97 @@
+#!/bin/sh
+##############################################################################
+##                                                                          ##
+##  kubor bootstrap wrapper for *NIX systems                                ##
+##                                                                          ##
+##############################################################################
+version="####UNDEFINED####"
+
+##############################################################################
+##  DO NOT EDIT BELOW!!                                                     ##
+##############################################################################
+scriptName="`basename \"$0\"`"
+dirName="`dirname \"$0\"`"
+
+fatal() {
+    echo "FATAL: $*" 1>&2
+    exit 1
+}
+
+info() {
+    echo "INFO: $*" 1>&2
+}
+
+doDownload() {
+    binaryDownloadUrl="https://github.com/levertonai/kubor/releases/download/${version}/kubor-${os}-${arch}${ext}"
+    info "Downloading ${binaryDownloadUrl}..."
+
+    tmpFile="${binary}.tmp"
+    if [ "$?" != "0" ]; then
+        fatal "Was not able to create a temporary file. See above."
+    fi
+
+    if which curl > /dev/null; then
+        curl -sSLf "${binaryDownloadUrl}" > "${tmpFile}"
+        if [ "$?" != "0" ]; then
+            fatal "Was not able to download binary from ${binaryDownloadUrl}. See above."
+        fi
+    elif which wget > /dev/null; then
+        wget -q -O "${tmpFile}" "${binaryDownloadUrl}"
+        if [ "$?" != "0" ]; then
+            fatal "Was not able to download binary from ${binaryDownloadUrl}. See above."
+        fi
+    else
+        fatal "Neither curl nor wget found in \$PATH. Please install at least one of those tools."
+    fi
+
+    chmod +x "${tmpFile}"
+    if [ "$?" != "0" ]; then
+        fatal "Was not able to make ${tmpFile} executable. See above."
+    fi
+
+    mv "${tmpFile}" "${binary}"
+    if [ "$?" != "0" ]; then
+        fatal "Was not able to move ${tmpFile} to ${binary}. See above."
+    fi
+}
+
+plainOs="`uname -s`"
+case "${plainOs}" in
+    Linux*)     os="linux";;
+    Darwin*)    os="darwin";;
+    CYGWIN*)    os="windows";;
+    MINGW*)     os="windows";;
+    *)          fatal "Unsupported operating system: ${plainOs}"
+esac
+
+plainArch="`uname -m`"
+case "${plainArch}" in
+    x86_64*)    arch="amd64";;
+    i386*)      arch="386";;
+    *)          fatal "Unsupported architecture: ${plainArch}"
+esac
+
+case "${os}" in
+    windows*)   ext=".exe";;
+    *)          ext="";;
+esac
+
+binariesCacheDir="${HOME}/.kubor/binaries"
+mkdir -p "${binariesCacheDir}"
+if [ "$?" != "0" ]; then
+    fatal "Cannot create cache directory for storing binaries. See above."
+fi
+
+binaryFileName="kubor-${os}-${arch}${version}${ext}"
+binary="${binariesCacheDir}/${binaryFileName}"
+
+if [ -x "${binary}" ]; then
+    "${binary}" version 2>&1 | grep "${version}" > /dev/null
+    if [ "$?" != "0" ]; then
+        doDownload
+    fi
+else
+    doDownload
+fi
+
+"${binary}" "$@"
