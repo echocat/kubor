@@ -13,7 +13,7 @@ type HasCommands interface {
 }
 
 type CliFactory interface {
-	ConfigureCliCommands(context string, hc HasCommands) error
+	ConfigureCliCommands(context string, hc HasCommands, version string) error
 }
 
 var (
@@ -25,9 +25,9 @@ func RegisterCliFactory(cliFactory CliFactory) CliFactory {
 	return cliFactory
 }
 
-func ConfigureCliCommands(context string, hc HasCommands) (err error) {
+func ConfigureCliCommands(context string, hc HasCommands, version string) (err error) {
 	for _, cliFactory := range cliFactories {
-		if err := cliFactory.ConfigureCliCommands(context, hc); err != nil {
+		if err := cliFactory.ConfigureCliCommands(context, hc, version); err != nil {
 			return err
 		}
 	}

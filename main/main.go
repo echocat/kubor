@@ -56,7 +56,7 @@ func main() {
 	kubernetes.ConfigureKubeConfigFlags(app)
 	log.DefaultLogger.ConfigureFlags(app)
 
-	if err := common.ConfigureCliCommands("", app); err != nil {
+	if err := common.ConfigureCliCommands("", app, extVersion); err != nil {
 		panic(err)
 	}
 	app.Command("version", "Print the actual version and other useful information.").

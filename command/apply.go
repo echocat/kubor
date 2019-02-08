@@ -44,7 +44,7 @@ type Apply struct {
 	DryRunOn  kubernetes.DryRunOn
 }
 
-func (instance *Apply) ConfigureCliCommands(context string, hc common.HasCommands) error {
+func (instance *Apply) ConfigureCliCommands(context string, hc common.HasCommands, version string) error {
 	if context != "" {
 		return nil
 	}

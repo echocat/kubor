@@ -25,7 +25,7 @@ type Evaluate struct {
 	Predicate  common.EvaluatingPredicate
 }
 
-func (instance *Evaluate) ConfigureCliCommands(context string, hc common.HasCommands) error {
+func (instance *Evaluate) ConfigureCliCommands(context string, hc common.HasCommands, version string) error {
 	if context != "" {
 		return nil
 	}
