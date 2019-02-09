@@ -21,11 +21,22 @@ var (
 )
 
 func Write(targetDir string, version string, opt WriteOpt) error {
-	if err := writeFile(filepath.Join(targetDir, "kuborw"), unixScript, version, opt, 0755); err != nil {
+	//noinspection GoBoolExpressions
+	if unixScript == "" || windowsScript == "" {
+		panic("unixScript and/or windowsScript are still empty. resources_tmp.go not generated before building?")
+	}
+	unixScriptFile := filepath.Join(targetDir, "kuborw")
+	windowsScriptFile := filepath.Join(targetDir, "kuborw.cmd")
+	if unixScriptFileExists, err := exists(unixScriptFile); err != nil {
 		return err
-	} else if err := writeFile(filepath.Join(targetDir, "kuborw.cmd"), windowsScript, version, opt, 0644); err != nil {
+	} else if err := writeFile(unixScriptFile, unixScript, version, opt, 0755); err != nil {
+		return err
+	} else if err := writeFile(windowsScriptFile, windowsScript, version, opt, 0644); err != nil {
 		return err
 	} else {
+		if unixScriptFileExists {
+			noticeAfterCreation(unixScriptFile)
+		}
 		return nil
 	}
 }
@@ -70,4 +81,14 @@ func openFile(file string, opt WriteOpt, perm os.FileMode) (*os.File, error) {
 		of |= os.O_CREATE | os.O_TRUNC
 	}
 	return os.OpenFile(file, of, perm)
+}
+
+func exists(file string) (bool, error) {
+	if _, err := os.Stat(file); os.IsNotExist(err) {
+		return false, nil
+	} else if err != nil {
+		return false, err
+	} else {
+		return true, nil
+	}
 }

@@ -19,13 +19,14 @@ var (
 func test(branch, commit string) {
 	testGoCode(currentTarget)
 
+	buildResources()
 	buildBinary(branch, commit, currentTarget, true)
 	testBinary(branch, commit, currentTarget)
 
 	if withDocker {
 		buildBinary(branch, commit, linuxAmd64, true)
 		for _, dv := range dockerVariants {
-			buildDocker(branch, dv, true)
+			buildDocker(branch, dv, true, true)
 			testDocker(branch, commit, dv)
 			tagDocker(branch, dv)
 		}
@@ -63,7 +64,7 @@ func testDocker(branch, commit string, v dockerVariant) {
 }
 
 func testDockerByExpectingResponse(branch string, v dockerVariant, expectedPartOfResponse string, command ...string) {
-	call := append([]string{"docker", "run", "--rm", v.imageName(branch)}, command...)
+	call := append([]string{"docker", "run", "--rm", v.imageName("TEST" + branch + "TEST")}, command...)
 	response := executeAndRecord(call...)
 	if !strings.Contains(response, expectedPartOfResponse) {
 		panic(fmt.Sprintf("Command failed [%s]\nResponse should contain: %s\nBut response was: %s",

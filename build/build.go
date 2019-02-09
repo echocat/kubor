@@ -23,7 +23,7 @@ func build(branch, commit string) {
 	buildBinaries(branch, commit)
 
 	if withDocker {
-		buildDockers(branch)
+		buildDockers(branch, false)
 		tagDockers(branch)
 	}
 }
@@ -82,18 +82,22 @@ func buildLdFlagsFor(branch, commit string, forTesting bool) string {
 		fmt.Sprintf(" -X main.extCompiled=%s", startTime.Format("2006-01-02T15:04:05Z"))
 }
 
-func buildDockers(branch string) {
+func buildDockers(branch string, forTesting bool) {
 	prepareDockerResources()
 	for _, v := range dockerVariants {
-		buildDocker(branch, v, false)
+		buildDocker(branch, v, false, forTesting)
 	}
 }
 
-func buildDocker(branch string, v dockerVariant, buildResources bool) {
+func buildDocker(branch string, v dockerVariant, buildResources bool, forTesting bool) {
 	if buildResources {
 		prepareDockerResources()
 	}
-	execute("docker", "build", "-t", v.imageName(branch), "-f", v.dockerFile, "--build-arg", "image="+imagePrefix, "--build-arg", "version="+branch, ".")
+	version := branch
+	if forTesting {
+		version = "TEST" + version + "TEST"
+	}
+	execute("docker", "build", "-t", v.imageName(version), "-f", v.dockerFile, "--build-arg", "image="+imagePrefix, "--build-arg", "version="+version, ".")
 }
 
 func tagDockers(branch string) {

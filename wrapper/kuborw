@@ -13,12 +13,12 @@ scriptName="`basename \"$0\"`"
 dirName="`dirname \"$0\"`"
 
 fatal() {
-    echo "FATAL: $*" 1>&2
+    echo -e "FATAL: $*" 1>&2
     exit 1
 }
 
 info() {
-    echo "INFO: $*" 1>&2
+    echo -e "INFO: $*" 1>&2
 }
 
 doDownload() {
@@ -81,7 +81,7 @@ case "${os}" in
 esac
 
 binariesCacheDir="${HOME}/.kubor/binaries"
-binaryFileName="kubor-${os}-${arch}${version}${ext}"
+binaryFileName="kubor-${os}-${arch}-${version}${ext}"
 binary="${binariesCacheDir}/${binaryFileName}"
 
 if [ "${KUBORW_IGNORE_DOCKER_IMAGE_MISMATCH}" != "yes" ]; then
