@@ -18,9 +18,9 @@ import (
 )
 
 const (
-	kubectlVersion       = "1.13.0"
-	dockerVersion        = "18.06.1-ce"
-	dockerMachineVersion = "0.16.0"
+	kubectlVersion       = "1.13.3"
+	dockerVersion        = "18.09.1-ce"
+	dockerMachineVersion = "0.16.1"
 	dockerNotaryVersion  = "0.6.1"
 )
 
