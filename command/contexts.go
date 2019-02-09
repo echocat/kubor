@@ -16,7 +16,7 @@ func init() {
 
 type Contexts struct{}
 
-func (instance *Contexts) ConfigureCliCommands(context string, hc common.HasCommands) error {
+func (instance *Contexts) ConfigureCliCommands(context string, hc common.HasCommands, version string) error {
 	if context != "" {
 		return nil
 	}

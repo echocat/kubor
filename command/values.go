@@ -18,7 +18,7 @@ type Values struct {
 	Command
 }
 
-func (instance *Values) ConfigureCliCommands(context string, hc common.HasCommands) error {
+func (instance *Values) ConfigureCliCommands(context string, hc common.HasCommands, version string) error {
 	if context != "" {
 		return nil
 	}

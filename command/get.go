@@ -27,7 +27,7 @@ type Get struct {
 	SourceHint bool
 }
 
-func (instance *Get) ConfigureCliCommands(context string, hc common.HasCommands) error {
+func (instance *Get) ConfigureCliCommands(context string, hc common.HasCommands, version string) error {
 	if context != "" {
 		return nil
 	}

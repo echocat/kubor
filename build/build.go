@@ -1,8 +1,10 @@
 package main
 
 import (
+	"encoding/base64"
 	"fmt"
 	"github.com/alecthomas/kingpin"
+	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -17,12 +19,40 @@ var (
 )
 
 func build(branch, commit string) {
+	buildResources()
 	buildBinaries(branch, commit)
 
 	if withDocker {
 		buildDockers(branch)
 		tagDockers(branch)
 	}
+}
+
+func buildResources() {
+	buildWRapperResources()
+}
+
+func buildWRapperResources() {
+	b := []byte(fmt.Sprintf(`
+package wrapper
+
+func init() {
+	unixScript = "%s"
+	windowsScript = "%s"
+}
+`, loadFileAsBase64("wrapper/kuborw"), loadFileAsBase64("wrapper/kuborw.cmd")))
+	must(ioutil.WriteFile("wrapper/resources_tmp.go", b, 0644))
+}
+
+func loadFile(source string) []byte {
+	b, err := ioutil.ReadFile(source)
+	must(err)
+	return b
+}
+
+func loadFileAsBase64(source string) string {
+	b := loadFile(source)
+	return base64.RawURLEncoding.EncodeToString(b)
 }
 
 func buildBinaries(branch, commit string) {

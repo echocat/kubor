@@ -95,7 +95,7 @@ type ShowTemplateFunctions struct {
 	FunctionNameFilters []string
 }
 
-func (instance *ShowTemplateFunctions) ConfigureCliCommands(context string, hc common.HasCommands) error {
+func (instance *ShowTemplateFunctions) ConfigureCliCommands(context string, hc common.HasCommands, version string) error {
 	if context != "show/template" {
 		return nil
 	}
