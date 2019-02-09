@@ -55,11 +55,11 @@ func testBinaryByExpectingResponse(t target, expectedPartOfResponse string, args
 func testDocker(branch, commit string, v dockerVariant) {
 	testDockerByExpectingResponse(branch, v, "Version:      TEST"+branch+"TEST", "kubor", "version")
 	testDockerByExpectingResponse(branch, v, "Git revision: TEST"+commit+"TEST", "kubor", "version")
+	testDockerByExpectingResponse(branch, v, "Version:      TEST"+branch+"TEST", "sh", "-c", "kubor wrapper ensure && ./kuborw version")
 	testDockerByExpectingResponse(branch, v, `GitVersion:"v`+kubectlVersion+`"`, "sh", "-c", "kubectl version || true")
 	testDockerByExpectingResponse(branch, v, "Version:           "+dockerVersion+"\n", "sh", "-c", "docker version || true")
 	testDockerByExpectingResponse(branch, v, "version "+dockerMachineVersion+",", "sh", "-c", "docker-machine version || true")
 	testDockerByExpectingResponse(branch, v, "Version:    "+dockerNotaryVersion+"\n", "sh", "-c", "notary version || true")
-
 }
 
 func testDockerByExpectingResponse(branch string, v dockerVariant, expectedPartOfResponse string, command ...string) {

@@ -93,7 +93,7 @@ func buildDocker(branch string, v dockerVariant, buildResources bool) {
 	if buildResources {
 		prepareDockerResources()
 	}
-	execute("docker", "build", "-t", v.imageName(branch), "-f", v.dockerFile, ".")
+	execute("docker", "build", "-t", v.imageName(branch), "-f", v.dockerFile, "--build-arg", "image="+imagePrefix, "--build-arg", "version="+branch, ".")
 }
 
 func tagDockers(branch string) {
