@@ -28,7 +28,7 @@ func test(branch, commit string) {
 		for _, dv := range dockerVariants {
 			buildDocker(branch, dv, true, true)
 			testDocker(branch, commit, dv)
-			tagDocker(branch, dv)
+			tagDocker(branch, dv, true)
 		}
 	}
 }

@@ -102,24 +102,28 @@ func buildDocker(branch string, v dockerVariant, buildResources bool, forTesting
 
 func tagDockers(branch string) {
 	for _, v := range dockerVariants {
-		tagDocker(branch, v)
+		tagDocker(branch, v, false)
 	}
 }
 
-func tagDocker(branch string, v dockerVariant) {
-	executeForVersionParts(branch, func(tagSuffix string) {
-		tagDockerWith(branch, v, v.imageName(tagSuffix))
+func tagDocker(branch string, v dockerVariant, forTesting bool) {
+	version := branch
+	if forTesting {
+		version = "TEST" + version + "TEST"
+	}
+	executeForVersionParts(version, func(tagSuffix string) {
+		tagDockerWith(version, v, v.imageName(tagSuffix))
 	})
-	if latestVersionPattern != nil && latestVersionPattern.MatchString(branch) {
-		tagDockerWith(branch, v, v.baseImageName())
+	if latestVersionPattern != nil && latestVersionPattern.MatchString(version) {
+		tagDockerWith(version, v, v.baseImageName())
 	}
 	if v.main {
-		tagDockerWith(branch, v, imagePrefix+":"+branch)
-		executeForVersionParts(branch, func(tagSuffix string) {
-			tagDockerWith(branch, v, imagePrefix+":"+tagSuffix)
+		tagDockerWith(version, v, imagePrefix+":"+version)
+		executeForVersionParts(version, func(tagSuffix string) {
+			tagDockerWith(version, v, imagePrefix+":"+tagSuffix)
 		})
-		if latestVersionPattern != nil && latestVersionPattern.MatchString(branch) {
-			tagDockerWith(branch, v, imagePrefix+":latest")
+		if latestVersionPattern != nil && latestVersionPattern.MatchString(version) {
+			tagDockerWith(version, v, imagePrefix+":latest")
 		}
 	}
 }
