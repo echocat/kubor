@@ -39,6 +39,7 @@ type Apply struct {
 	Command
 
 	Wait      time.Duration
+	KeepAlive time.Duration
 	Predicate common.EvaluatingPredicate
 	DryRun    DryRunType
 	DryRunOn  kubernetes.DryRunOn
@@ -58,6 +59,11 @@ func (instance *Apply) ConfigureCliCommands(context string, hc common.HasCommand
 		Envar("KUBOR_WAIT").
 		Default((time.Minute * 5).String()).
 		DurationVar(&instance.Wait)
+	cmd.Flag("keepAlive", "If set to value larger than 0 it will do keep alive actions while wait for "+
+		" completions.").
+		Envar("KUBOR_KEEP_ALIVE").
+		Default((time.Minute * 1).String()).
+		DurationVar(&instance.KeepAlive)
 	cmd.Flag("predicate", "Filters every object that should be listed. Empty allows everything."+
 		" Example: \"{{.spec.name}}=Foo.*\"").
 		PlaceHolder("[!]<template>=<must match regex>").
@@ -144,6 +150,7 @@ func (instance *applyTask) onObject(source string, object runtime.Object, unstru
 	if err != nil {
 		return err
 	}
+	apply.KeepAliveInterval = instance.source.KeepAlive
 
 	instance.applySet.Add(apply)
 

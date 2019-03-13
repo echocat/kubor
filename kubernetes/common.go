@@ -13,6 +13,10 @@ func GroupVersionKindToTypeMeta(kind schema.GroupVersionKind) metav1.TypeMeta {
 	}
 }
 
+func Pbool(v bool) *bool {
+	return &v
+}
+
 func Pint32(v int32) *int32 {
 	return &v
 }

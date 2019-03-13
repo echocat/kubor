@@ -37,7 +37,8 @@ func NewApplyObject(source string, object *unstructured.Unstructured, client dyn
 }
 
 type ApplyObject struct {
-	log log.Logger
+	log               log.Logger
+	KeepAliveInterval time.Duration
 
 	object   ObjectResource
 	original *ObjectResource
@@ -134,41 +135,68 @@ func (instance *ApplyObject) Wait(timeout time.Duration) (err error) {
 		err = rErr
 		return
 	}
-	w, wErr := resource.Watch(nil)
-	if wErr != nil {
-		err = wErr
-		return
+	for {
+		cTimeout := timeout - time.Now().Sub(start)
+		if cTimeout <= 0 {
+			err = common.NewTimeoutError("%v was not ready after %v", resource, timeout)
+			return
+		} else if instance.KeepAliveInterval > 0 && cTimeout > instance.KeepAliveInterval {
+			cTimeout = instance.KeepAliveInterval
+		}
+		if done, wErr := instance.watchRun(resource, *generation, cTimeout, l); wErr != nil || done {
+			err = wErr
+			return
+		}
+		duration := time.Now().Sub(start)
+		l.
+			WithField("duration", duration).
+			Info("%v is still not ready after %v. Continue wait for max %v...", resource, duration, timeout-duration)
 	}
-	get, gErr := resource.Get(nil)
-	if gErr != nil {
-		err = gErr
-		return
-	}
-	if instance.matchesReferenceOfObjectToApplyAndGenerationAndIsReady(get, *generation) {
-		return
-	}
-	rc := w.ResultChan()
-	for afterCh := time.After(timeout); ; {
-		select {
-		case event := <-rc:
-			eventObjectInfo, _ := GetObjectInfo(event.Object)
-			ld := log.
-				WithDeepFieldOn("event", event, log.IsTraceEnabled)
+}
 
-			if !instance.matchesReferenceOfObjectToApplyAndGeneration(event.Object, *generation) {
+func (instance *ApplyObject) watchRun(resource ObjectResource, generation int64, timeout time.Duration, l log.Logger) (bool, error) {
+	w, err := resource.Watch(nil)
+	if err != nil {
+		return false, err
+	}
+	defer w.Stop()
+	get, err := resource.Get(nil)
+	if err != nil {
+		return false, err
+	}
+	if instance.matchesReferenceOfObjectToApplyAndGenerationAndIsReady(get, generation) {
+		return true, nil
+	}
+	start := time.Now()
+	for {
+		cTimeout := timeout - time.Now().Sub(start)
+		if cTimeout <= 0 {
+			return false, nil
+		}
+		select {
+		case event := <-w.ResultChan():
+			eventObjectInfo, _ := GetObjectInfo(event.Object)
+			ld := l.WithDeepFieldOn("event", event, log.IsTraceEnabled)
+			ld.WithField("event", event).
+				Trace("Received event %v on %v.", event.Type, eventObjectInfo)
+
+			if !instance.matchesReferenceOfObjectToApplyAndGeneration(event.Object, generation) {
 				ld.Trace("Received event %v on %v which does not match %v and will be ignored.", event.Type, eventObjectInfo, instance.object)
 			} else if ready := IsReady(event.Object); ready == nil {
 				ld.Debug("Received event %v on %v does not support ready check and will be assumed as ready now.", event.Type, eventObjectInfo)
-				return
+				return true, nil
 			} else if *ready {
 				ld.Debug("Received event %v on %v which passes the ready check.", event.Type, eventObjectInfo)
-				return
+				return true, nil
 			} else {
 				ld.Debug("Received event %v on %v which does not pass the ready check. Continue wait...", event.Type, eventObjectInfo)
 			}
-		case <-afterCh:
-			err = common.NewTimeoutError("%v was not ready after %v", resource, timeout)
-			return
+		case <-time.After(cTimeout):
+			get, err := resource.Get(nil)
+			if err != nil {
+				return false, err
+			}
+			return instance.matchesReferenceOfObjectToApplyAndGenerationAndIsReady(get, generation), nil
 		}
 	}
 }

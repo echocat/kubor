@@ -4,6 +4,7 @@ import (
 	"github.com/levertonai/kubor/common"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
+	"reflect"
 	"strings"
 )
 
@@ -32,6 +33,8 @@ func NewAggregationFor(object *unstructured.Unstructured) Aggregation {
 		return DaemonSetAggregation{base}
 	case "statefulset":
 		return StatefulSetAggregation{base}
+	case "pod":
+		return PodAggregation{base}
 	}
 	return base
 }
@@ -83,11 +86,7 @@ func (instance DeploymentAggregation) Available() *int32 {
 func (instance DeploymentAggregation) IsReady() *bool {
 	desired := instance.Desired()
 	available := instance.Available()
-	if desired == nil || available == nil {
-		return nil
-	}
-	result := *desired <= *available
-	return &result
+	return Pbool(desired != nil && available != nil && *desired <= *available)
 }
 
 type DaemonSetAggregation struct {
@@ -113,11 +112,7 @@ func (instance DaemonSetAggregation) Available() *int32 {
 func (instance DaemonSetAggregation) IsReady() *bool {
 	desired := instance.Desired()
 	available := instance.Available()
-	if desired == nil || available == nil {
-		return nil
-	}
-	result := *desired <= *available
-	return &result
+	return Pbool(desired != nil && available != nil && *desired <= *available)
 }
 
 type StatefulSetAggregation struct {
@@ -143,9 +138,62 @@ func (instance StatefulSetAggregation) Available() *int32 {
 func (instance StatefulSetAggregation) IsReady() *bool {
 	desired := instance.Desired()
 	ready := instance.Ready()
-	if desired == nil || ready == nil {
+	return Pbool(desired != nil && ready != nil && *desired <= *ready)
+}
+
+type PodAggregation struct {
+	AnonymousAggregation
+}
+
+func (instance PodAggregation) Desired() *int32 {
+	statuses := common.GetObjectPathValue(instance.Object, "status", "containerStatuses")
+	if statuses == nil {
 		return nil
 	}
-	result := *desired <= *ready
-	return &result
+	vStatuses := common.SimplifyValue(reflect.ValueOf(statuses))
+	if vStatuses.Kind() != reflect.Slice {
+		return nil
+	}
+	return Pint32(int32(vStatuses.Len()))
+}
+
+func (instance PodAggregation) Ready() *int32 {
+	statuses := common.GetObjectPathValue(instance.Object, "status", "containerStatuses")
+	if statuses == nil {
+		return nil
+	}
+	vStatuses := common.SimplifyValue(reflect.ValueOf(statuses))
+	if vStatuses.Kind() != reflect.Slice {
+		return nil
+	}
+	var ready int32
+	numberOfContainers := vStatuses.Len()
+	for i := 0; i < numberOfContainers; i++ {
+		readyValue := common.GetObjectPathValue(vStatuses.Index(i).Interface(), "ready")
+		switch v := readyValue.(type) {
+		case *bool:
+			if *v {
+				ready++
+			}
+		case bool:
+			if v {
+				ready++
+			}
+		}
+	}
+	return Pint32(ready)
+}
+
+func (instance PodAggregation) UpToDate() *int32 {
+	return nil
+}
+
+func (instance PodAggregation) Available() *int32 {
+	return nil
+}
+
+func (instance PodAggregation) IsReady() *bool {
+	desired := instance.Desired()
+	ready := instance.Ready()
+	return Pbool(desired != nil && ready != nil && *desired <= *ready)
 }

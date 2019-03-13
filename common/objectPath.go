@@ -48,7 +48,7 @@ func getPropertyForFieldName(v reflect.Value, name string) reflect.Value {
 	case reflect.Struct:
 		if field, ok := t.FieldByName(name); ok {
 			fieldValue := v.FieldByIndex(field.Index)
-			return simplifyValue(fieldValue)
+			return SimplifyValue(fieldValue)
 		}
 		return reflect.Value{}
 	case reflect.Map:
@@ -56,12 +56,12 @@ func getPropertyForFieldName(v reflect.Value, name string) reflect.Value {
 		if !value.IsValid() {
 			return reflect.Value{}
 		}
-		return simplifyValue(value)
+		return SimplifyValue(value)
 	}
 	return reflect.Value{}
 }
 
-func simplifyValue(v reflect.Value) reflect.Value {
+func SimplifyValue(v reflect.Value) reflect.Value {
 	for v.Kind() == reflect.Ptr {
 		if v.IsNil() {
 			return reflect.Value{}

@@ -4,10 +4,12 @@ require (
 	github.com/alecthomas/kingpin v2.2.6+incompatible
 	github.com/alecthomas/template v0.0.0-20160405071501-a0175ee3bccc // indirect
 	github.com/alecthomas/units v0.0.0-20151022065526-2efee857e7cf // indirect
+	github.com/antlr/antlr4 v0.0.0-20190207013812-1c6c62afc7cb // indirect
 	github.com/aokoli/goutils v1.0.1
 	github.com/evanphx/json-patch v4.1.0+incompatible // indirect
 	github.com/gogo/protobuf v1.1.1 // indirect
 	github.com/google/btree v0.0.0-20180813153112-4030bb1f1f0c // indirect
+	github.com/google/cel-go v0.1.0
 	github.com/google/gofuzz v0.0.0-20170612174753-24818f796faf // indirect
 	github.com/googleapis/gnostic v0.2.0
 	github.com/gregjones/httpcache v0.0.0-20181110185634-c63ab54fda8f // indirect
@@ -28,6 +30,7 @@ require (
 	golang.org/x/sys v0.0.0-20190124100055-b90733256f2e // indirect
 	golang.org/x/time v0.0.0-20181108054448-85acf8d2951c // indirect
 	google.golang.org/appengine v1.3.0 // indirect
+	google.golang.org/genproto v0.0.0-20190201180003-4b09977fb922 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v2 v2.2.1
 	k8s.io/api v0.0.0-20181204000039-89a74a8d264df0e993299876a8cde88379b940ee // indirect
