@@ -68,11 +68,11 @@ type DeploymentAggregation struct {
 }
 
 func (instance DeploymentAggregation) Desired() *int32 {
-	return TryCastToInt32(common.GetObjectPathValue(instance.Object, "spec", "replicas"))
+	return TryCastToInt32(common.GetObjectPathValue(instance.Object, "status", "replicas"))
 }
 
 func (instance DeploymentAggregation) Ready() *int32 {
-	return TryCastToInt32(common.GetObjectPathValue(instance.Object, "spec", "readyReplicas"))
+	return TryCastToInt32(common.GetObjectPathValue(instance.Object, "status", "readyReplicas"))
 }
 
 func (instance DeploymentAggregation) UpToDate() *int32 {
@@ -120,7 +120,7 @@ type StatefulSetAggregation struct {
 }
 
 func (instance StatefulSetAggregation) Desired() *int32 {
-	return TryCastToInt32(common.GetObjectPathValue(instance.Object, "spec", "replicas"))
+	return TryCastToInt32(common.GetObjectPathValue(instance.Object, "status", "replicas"))
 }
 
 func (instance StatefulSetAggregation) Ready() *int32 {
