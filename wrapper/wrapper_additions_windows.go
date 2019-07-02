@@ -2,7 +2,7 @@
 
 package wrapper
 
-import "github.com/levertonai/kubor/log"
+import "github.com/echocat/kubor/log"
 
 func noticeAfterCreation(unixScriptFile string) {
 	log.Warn("You created successfully the kubor wrapper - this includes the file '%s'."+

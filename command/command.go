@@ -3,8 +3,8 @@ package command
 import (
 	"fmt"
 	"github.com/alecthomas/kingpin"
-	"github.com/levertonai/kubor/kubernetes"
-	"github.com/levertonai/kubor/model"
+	"github.com/echocat/kubor/kubernetes"
+	"github.com/echocat/kubor/model"
 	"k8s.io/client-go/dynamic"
 )
 

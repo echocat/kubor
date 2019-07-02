@@ -22,7 +22,7 @@ info() {
 }
 
 doDownload() {
-    binaryDownloadUrl="https://github.com/levertonai/kubor/releases/download/${version}/kubor-${os}-${arch}${ext}"
+    binaryDownloadUrl="https://github.com/echocat/kubor/releases/download/${version}/kubor-${os}-${arch}${ext}"
     info "Downloading ${binaryDownloadUrl}..."
 
     mkdir -p "${binariesCacheDir}"
@@ -91,7 +91,7 @@ if [ "${KUBORW_IGNORE_DOCKER_IMAGE_MISMATCH}" != "yes" ]; then
             if [ -r "/usr/lib/kubor/docker-image" ]; then
                 dockerImage="`cat /usr/lib/kubor/docker-image`"
             else
-                dockerImage="levertonai/kubor"
+                dockerImage="echocat/kubor"
             fi
             fatal "You're are using kuborw with version ${version} inside of a kubor docker image with version ${dockerVersion}." \
                   "This could lead to unexpected behaviors. We recommend to align both versions together by either:" \

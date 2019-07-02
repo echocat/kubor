@@ -52,7 +52,7 @@ GOTO :eofSuccess
 
 :doDownload
     SETLOCAL
-    SET binaryDownloadUrl=https://github.com/levertonai/kubor/releases/download/%version%/kubor-%os%-%arch%%ext%
+    SET binaryDownloadUrl=https://github.com/echocat/kubor/releases/download/%version%/kubor-%os%-%arch%%ext%
     CALL :info Downloading %binaryDownloadUrl%...
 
     SET tmpFile=%binary%.%RANDOM%.tmp

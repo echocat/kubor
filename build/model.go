@@ -6,7 +6,7 @@ import (
 	"runtime"
 )
 
-const imagePrefix = "levertonai/kubor"
+const imagePrefix = "echocat/kubor"
 
 var (
 	dockerVariants = []dockerVariant{

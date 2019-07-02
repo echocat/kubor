@@ -1,7 +1,7 @@
 package command
 
 import (
-	"github.com/levertonai/kubor/common"
+	"github.com/echocat/kubor/common"
 )
 
 func init() {

@@ -2,8 +2,8 @@ package command
 
 import (
 	"github.com/alecthomas/kingpin"
-	"github.com/levertonai/kubor/common"
-	"github.com/levertonai/kubor/wrapper"
+	"github.com/echocat/kubor/common"
+	"github.com/echocat/kubor/wrapper"
 )
 
 func init() {

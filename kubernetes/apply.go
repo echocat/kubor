@@ -2,9 +2,9 @@ package kubernetes
 
 import (
 	"fmt"
-	"github.com/levertonai/kubor/common"
-	"github.com/levertonai/kubor/kubernetes/fixes"
-	"github.com/levertonai/kubor/log"
+	"github.com/echocat/kubor/common"
+	"github.com/echocat/kubor/kubernetes/fixes"
+	"github.com/echocat/kubor/log"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"

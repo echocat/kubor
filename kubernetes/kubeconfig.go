@@ -3,9 +3,9 @@ package kubernetes
 import (
 	"errors"
 	"fmt"
+	"github.com/echocat/kubor/common"
+	"github.com/echocat/kubor/log"
 	"github.com/imdario/mergo"
-	"github.com/levertonai/kubor/common"
-	"github.com/levertonai/kubor/log"
 	"k8s.io/client-go/discovery"
 	restclient "k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"

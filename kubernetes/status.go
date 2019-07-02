@@ -1,7 +1,7 @@
 package kubernetes
 
 import (
-	"github.com/levertonai/kubor/common"
+	"github.com/echocat/kubor/common"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"reflect"

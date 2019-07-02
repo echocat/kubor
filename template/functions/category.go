@@ -1,6 +1,6 @@
 package functions
 
-import "github.com/levertonai/kubor/template"
+import "github.com/echocat/kubor/template"
 
 type Category struct {
 	Functions Functions
@@ -91,9 +91,6 @@ func (instance Categories) WithoutFunction(functionName string) Categories {
 
 func (instance Categories) FilterBy(predicate FunctionPredicate) (Categories, error) {
 	result := Categories{}
-	if result == nil {
-		result = Categories{}
-	}
 	for name, category := range instance {
 		if funcs, err := category.FilterBy(predicate); err != nil {
 			return Categories{}, err

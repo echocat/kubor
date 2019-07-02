@@ -2,9 +2,9 @@ package model
 
 import (
 	"fmt"
-	"github.com/levertonai/kubor/common"
-	"github.com/levertonai/kubor/kubernetes"
-	"github.com/levertonai/kubor/log"
+	"github.com/echocat/kubor/common"
+	"github.com/echocat/kubor/kubernetes"
+	"github.com/echocat/kubor/log"
 	"gopkg.in/yaml.v2"
 	"io"
 	"os"

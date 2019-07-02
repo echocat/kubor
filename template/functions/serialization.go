@@ -3,7 +3,7 @@ package functions
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/levertonai/kubor/template"
+	"github.com/echocat/kubor/template"
 	"gopkg.in/yaml.v2"
 	"os"
 	"strings"

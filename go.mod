@@ -1,4 +1,4 @@
-module github.com/levertonai/kubor
+module github.com/echocat/kubor
 
 require (
 	github.com/alecthomas/kingpin v2.2.6+incompatible
@@ -30,7 +30,7 @@ require (
 	golang.org/x/sys v0.0.0-20190124100055-b90733256f2e // indirect
 	golang.org/x/time v0.0.0-20181108054448-85acf8d2951c // indirect
 	google.golang.org/appengine v1.3.0 // indirect
-	google.golang.org/genproto v0.0.0-20190201180003-4b09977fb922 // indirect
+	google.golang.org/genproto v0.0.0-20190201180003-4b09977fb922
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v2 v2.2.1
 	k8s.io/api v0.0.0-20181204000039-89a74a8d264df0e993299876a8cde88379b940ee // indirect

@@ -1,6 +1,6 @@
 # kubor
 
-[![Build Status](https://travis-ci.org/levertonai/kubor.svg?branch=master)](https://travis-ci.org/levertonai/kubor)
+[![Build Status](https://travis-ci.org/echocat/kubor.svg?branch=master)](https://travis-ci.org/echocat/kubor)
 
 Safely bringing repositories using templating and charting inside CI/CD pipelines to Kubernetes.
 
@@ -9,8 +9,8 @@ Safely bringing repositories using templating and charting inside CI/CD pipeline
 ## Contributing
 
 kubor is an open source project by [LEVERTON GmbH](https://leverton.ai).
-So if you want to make this project even better, you can contribute to this project on [Github](https://github.com/levertonai/kubor)
-by [fork us](https://github.com/levertonai/kubor/fork).
+So if you want to make this project even better, you can contribute to this project on [Github](https://github.com/echocat/kubor)
+by [fork us](https://github.com/echocat/kubor/fork).
 
 If you commit code to this project, you have to accept that this code will be released under the [license](#license) of this project.
 

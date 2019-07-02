@@ -3,7 +3,7 @@ package model
 import (
 	"bytes"
 	"fmt"
-	"github.com/levertonai/kubor/common"
+	"github.com/echocat/kubor/common"
 	"io"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -47,10 +47,7 @@ func (instance *ObjectHandler) Handle(cp ContentProvider) error {
 	if se, ok := err.(*errors.StatusError); ok {
 		return se
 	}
-	if err != nil {
-		return fmt.Errorf("cannot handle '%s': %v", name, err)
-	}
-	return nil
+	return fmt.Errorf("cannot handle '%s': %v", name, err)
 }
 
 func (instance *ObjectHandler) handleContent(source string, content []byte) error {

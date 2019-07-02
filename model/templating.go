@@ -3,7 +3,7 @@ package model
 import (
 	"bytes"
 	"fmt"
-	"github.com/levertonai/kubor/template/functions"
+	"github.com/echocat/kubor/template/functions"
 	"io"
 	"path/filepath"
 	"strings"

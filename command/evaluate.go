@@ -2,8 +2,8 @@ package command
 
 import (
 	"fmt"
-	"github.com/levertonai/kubor/common"
-	"github.com/levertonai/kubor/model"
+	"github.com/echocat/kubor/common"
+	"github.com/echocat/kubor/model"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer/json"
