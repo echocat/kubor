@@ -8,6 +8,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"reflect"
+	"strings"
 )
 
 type ObjectInfo struct {
@@ -37,7 +38,7 @@ func GetObjectInfo(object runtime.Object) (ObjectInfo, error) {
 	groupVersionResource, _ := meta.UnsafeGuessKindToResource(kind)
 	typeMeta := GroupVersionKindToTypeMeta(kind)
 	namespace := objv.GetNamespace()
-	if namespace == "" {
+	if namespace == "" && strings.ToLower(kind.Kind) != "namespace" {
 		return ObjectInfo{}, fmt.Errorf("meta.namespace is not set or empty")
 	}
 	name := objv.GetName()
