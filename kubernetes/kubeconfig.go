@@ -47,7 +47,7 @@ func ConfigureKubeConfigFlags(hf common.HasFlags) {
 func NewRuntime() (Runtime, error) {
 	if kubeConfigPath == "mock" {
 		if kubeContext == "" {
-			return nil, errors.New("if --kubeconfig=mock specified --context=<context> is required")
+			kubeContext = "mock"
 		}
 		return newRuntimeMock(kubeContext)
 	}

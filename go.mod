@@ -40,3 +40,5 @@ require (
 	k8s.io/kube-openapi v0.0.0-20190205224424-fd29a9f2f429 // indirect
 	sigs.k8s.io/yaml v1.1.0 // indirect
 )
+
+go 1.13
