@@ -34,7 +34,7 @@ func ConfigureKubeConfigFlags(hf common.HasFlags) {
 		" environment variable KUBE_CONFIG."+
 		" If this value is 'mock' it will use a kubeconfig which cannot do deployments but works with every named context"+
 		"; --context is in this case mandatory.").
-		Envar("KUBOR_KUBECONFIG").
+		Envar("KUBECONFIG").
 		PlaceHolder("<kube config file>").
 		StringVar(&kubeConfigPath)
 	hf.Flag("context", "Context of the kubeconfig which is used for the actual execution.").
