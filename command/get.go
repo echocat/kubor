@@ -27,7 +27,7 @@ type Get struct {
 	SourceHint bool
 }
 
-func (instance *Get) ConfigureCliCommands(context string, hc common.HasCommands, version string) error {
+func (instance *Get) ConfigureCliCommands(context string, hc common.HasCommands, _ string) error {
 	if context != "" {
 		return nil
 	}
@@ -53,7 +53,7 @@ func (instance *Get) RunWithArguments(arguments Arguments) error {
 		dynamicClient: arguments.DynamicClient,
 		first:         true,
 	}
-	oh, err := model.NewObjectHandler(task.onObject)
+	oh, err := model.NewObjectHandler(task.onObject, arguments.Project)
 	if err != nil {
 		return err
 	}
@@ -72,7 +72,7 @@ type getTask struct {
 	first         bool
 }
 
-func (instance *getTask) onObject(source string, object runtime.Object, unstructured *unstructured.Unstructured) error {
+func (instance *getTask) onObject(source string, _ runtime.Object, unstructured *unstructured.Unstructured) error {
 	if matches, err := instance.source.Predicate.Matches(unstructured.Object); err != nil {
 		return err
 	} else if !matches {
@@ -97,7 +97,7 @@ func (instance *getTask) onObject(source string, object runtime.Object, unstruct
 		fmt.Printf(sourceHintTemplate, source)
 	}
 
-	if err := json.NewYAMLSerializer(json.DefaultMetaFactory, scheme.Scheme, scheme.Scheme).
+	if err := json.NewSerializerWithOptions(json.DefaultMetaFactory, scheme.Scheme, scheme.Scheme, json.SerializerOptions{Yaml: true, Pretty: true}).
 		Encode(ul, os.Stdout); err != nil {
 		return err
 	}

@@ -37,7 +37,7 @@ type runtimeImpl struct {
 	config      *restclient.Config
 	contextName string
 
-	discoveryClient *discovery.CachedDiscoveryClient
+	discoveryClient discovery.DiscoveryInterface
 }
 
 func (instance *runtimeImpl) NewDynamicClient() (dynamic.Interface, error) {

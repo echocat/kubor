@@ -1,6 +1,5 @@
 /.idea
 *.iml
-/go.sum
 /out
 /dist
 /var

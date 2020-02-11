@@ -13,9 +13,6 @@ import (
 	"k8s.io/client-go/util/homedir"
 	"os"
 	"path/filepath"
-	"regexp"
-	"strings"
-	"time"
 )
 
 var (
@@ -82,10 +79,8 @@ func NewKubeClientConfig() (clientcmd.ClientConfig, string, error) {
 	return result, selectedContext, nil
 }
 
-func newDiscoveryClientFor(config *restclient.Config) (*discovery.CachedDiscoveryClient, error) {
-	discoveryCacheDir := computeDiscoverCacheDir(filepath.Join(homedir.HomeDir(), ".kube", "cache", "discovery"), config.Host)
-	httpCacheDir := filepath.Join(homedir.HomeDir(), ".kube", "http-cache")
-	return discovery.NewCachedDiscoveryClientForConfig(config, discoveryCacheDir, httpCacheDir, time.Duration(10*time.Minute))
+func newDiscoveryClientFor(config *restclient.Config) (discovery.DiscoveryInterface, error) {
+	return discovery.NewDiscoveryClientForConfig(config)
 }
 
 type kubeConfigLoader struct {
@@ -136,14 +131,4 @@ func (l *kubeConfigLoader) Load() (*clientcmdapi.Config, error) {
 	}
 
 	return config, nil
-}
-
-var overlyCautiousIllegalFileCharacters = regexp.MustCompile(`[^(\w/.)]`)
-
-func computeDiscoverCacheDir(parentDir, host string) string {
-	// strip the optional scheme from host if its there:
-	schemelessHost := strings.Replace(strings.Replace(host, "https://", "", 1), "http://", "", 1)
-	// now do a simple collapse of non-AZ09 characters.  Collisions are possible but unlikely.  Even if we do collide the problem is short lived
-	safeHost := overlyCautiousIllegalFileCharacters.ReplaceAllString(schemelessHost, "_")
-	return filepath.Join(parentDir, safeHost)
 }

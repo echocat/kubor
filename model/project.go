@@ -19,6 +19,7 @@ type Project struct {
 	Release           string              `yaml:"release,omitempty" json:"release,omitempty"`
 	Templating        Templating          `yaml:"templating,omitempty" json:"templating,omitempty"`
 	ConditionalValues []ConditionalValues `yaml:"values,omitempty" json:"values,omitempty"`
+	Validation        Validation          `yaml:"validation,omitempty" json:"validation,omitempty"`
 
 	// Values set using implicitly.
 	Source  string            `yaml:"-" json:"-"`
