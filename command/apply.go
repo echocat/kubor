@@ -45,7 +45,7 @@ type Apply struct {
 	DryRunOn  kubernetes.DryRunOn
 }
 
-func (instance *Apply) ConfigureCliCommands(context string, hc common.HasCommands, version string) error {
+func (instance *Apply) ConfigureCliCommands(context string, hc common.HasCommands, _ string) error {
 	if context != "" {
 		return nil
 	}
@@ -95,7 +95,7 @@ func (instance *Apply) RunWithArguments(arguments Arguments) error {
 		dynamicClient: arguments.DynamicClient,
 		runtime:       arguments.Runtime,
 	}
-	oh, err := model.NewObjectHandler(task.onObject)
+	oh, err := model.NewObjectHandler(task.onObject, arguments.Project)
 	if err != nil {
 		return err
 	}
@@ -139,7 +139,7 @@ type applyTask struct {
 	runtime       kubernetes.Runtime
 }
 
-func (instance *applyTask) onObject(source string, object runtime.Object, unstructured *unstructured.Unstructured) error {
+func (instance *applyTask) onObject(source string, _ runtime.Object, unstructured *unstructured.Unstructured) error {
 	if matches, err := instance.source.Predicate.Matches(unstructured.Object); err != nil {
 		return err
 	} else if !matches {

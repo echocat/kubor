@@ -18,9 +18,9 @@ import (
 )
 
 const (
-	kubectlVersion       = "1.14.1"
-	dockerVersion        = "18.09.4"
-	dockerMachineVersion = "0.16.1"
+	kubectlVersion       = "1.17.2"
+	dockerVersion        = "19.03.5"
+	dockerMachineVersion = "0.16.2"
 	dockerNotaryVersion  = "0.6.1"
 )
 
@@ -32,6 +32,7 @@ var (
 func download(url string, to string, mode os.FileMode) {
 	log.Printf("Download %s to %s(%v)...", url, to, mode)
 	body := startDownload(url)
+	//noinspection GoUnhandledErrorResult
 	defer body.Close()
 	save(body, to, mode)
 }
@@ -39,6 +40,7 @@ func download(url string, to string, mode os.FileMode) {
 func downloadFromTarGz(url string, partName string, to string, mode os.FileMode) {
 	log.Printf("Download %s of %s to %s(%v)...", partName, url, to, mode)
 	body := startDownload(url)
+	//noinspection GoUnhandledErrorResult
 	defer body.Close()
 
 	gr, err := gzip.NewReader(body)
@@ -81,6 +83,7 @@ func save(from io.Reader, to string, mode os.FileMode) {
 	must(os.MkdirAll(dir, 0755))
 	f, err := os.OpenFile(to, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, mode)
 	must(err)
+	//noinspection GoUnhandledErrorResult
 	defer f.Close()
 	_, err = io.Copy(f, from)
 	must(err)

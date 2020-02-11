@@ -19,15 +19,17 @@ type ContentProvider func() (name string, content []byte, err error)
 
 type OnObject func(source string, object runtime.Object, unstructured *unstructured.Unstructured) error
 
-func NewObjectHandler(onObject OnObject) (*ObjectHandler, error) {
+func NewObjectHandler(onObject OnObject, project Project) (*ObjectHandler, error) {
 	return &ObjectHandler{
 		OnObject:     onObject,
+		Project:      project,
 		Deserializer: scheme.Codecs.UniversalDeserializer(),
 	}, nil
 }
 
 type ObjectHandler struct {
 	OnObject OnObject
+	Project  Project
 
 	Deserializer runtime.Decoder
 }
@@ -63,7 +65,15 @@ func (instance *ObjectHandler) handleContent(source string, content []byte) erro
 	for i, part := range parts {
 		if strings.TrimSpace(part) != "" {
 			fSource := fmt.Sprintf("%s#%d", source, i)
-			if object, _, err := instance.Deserializer.Decode([]byte(part), nil, nil); err != nil {
+			if object, _, err := instance.Deserializer.Decode([]byte(part), nil, nil); runtime.IsNotRegisteredError(err) {
+				if unstr, nErr := instance.decodeUnstructured([]byte(part)); nErr != nil {
+					return fmt.Errorf("%s: %v", fSource, err)
+				} else if !instance.Project.Validation.Schema.IsIgnored(unstr.GroupVersionKind()) {
+					return fmt.Errorf("%s: %v", fSource, err)
+				} else if err := instance.OnObject(fSource, unstr, unstr); err != nil {
+					return fmt.Errorf("%s: %v", fSource, err)
+				}
+			} else if err != nil {
 				return fmt.Errorf("%s: %v", fSource, err)
 			} else if unstr, err := instance.decodeUnstructured([]byte(part)); err != nil {
 				return fmt.Errorf("%s: %v", fSource, err)

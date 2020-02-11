@@ -25,7 +25,7 @@ type Evaluate struct {
 	Predicate  common.EvaluatingPredicate
 }
 
-func (instance *Evaluate) ConfigureCliCommands(context string, hc common.HasCommands, version string) error {
+func (instance *Evaluate) ConfigureCliCommands(context string, hc common.HasCommands, _ string) error {
 	if context != "" {
 		return nil
 	}
@@ -52,7 +52,7 @@ func (instance *Evaluate) RunWithArguments(arguments Arguments) error {
 		source: instance,
 		first:  true,
 	}
-	oh, err := model.NewObjectHandler(task.onObject)
+	oh, err := model.NewObjectHandler(task.onObject, arguments.Project)
 	if err != nil {
 		return err
 	}
@@ -85,6 +85,6 @@ func (instance *evaluateTask) onObject(source string, object runtime.Object, uns
 	if instance.source.SourceHint {
 		fmt.Printf(sourceHintTemplate, source)
 	}
-	encoder := json.NewYAMLSerializer(json.DefaultMetaFactory, scheme.Scheme, scheme.Scheme)
+	encoder := json.NewSerializerWithOptions(json.DefaultMetaFactory, scheme.Scheme, scheme.Scheme, json.SerializerOptions{Yaml: true, Pretty: true})
 	return encoder.Encode(object, os.Stdout)
 }
