@@ -21,8 +21,8 @@ type Apply interface {
 	String() string
 }
 
-func NewApplyObject(source string, object *unstructured.Unstructured, client dynamic.Interface, runtime Runtime) (*ApplyObject, error) {
-	objectResource, err := GetObjectResource(object, client)
+func NewApplyObject(source string, object *unstructured.Unstructured, client dynamic.Interface, runtime Runtime, objectValidator ObjectValidator) (*ApplyObject, error) {
+	objectResource, err := GetObjectResource(object, client, objectValidator)
 	if err != nil {
 		return nil, err
 	}
@@ -31,8 +31,9 @@ func NewApplyObject(source string, object *unstructured.Unstructured, client dyn
 		log: log.
 			WithField("source", source).
 			WithField("object", objectResource),
-		object:  objectResource,
-		runtime: runtime,
+		object:          objectResource,
+		runtime:         runtime,
+		objectValidator: objectValidator,
 	}, nil
 }
 
@@ -43,8 +44,9 @@ type ApplyObject struct {
 	object   ObjectResource
 	original *ObjectResource
 
-	applied *unstructured.Unstructured
-	runtime Runtime
+	applied         *unstructured.Unstructured
+	objectValidator ObjectValidator
+	runtime         Runtime
 }
 
 func (instance ApplyObject) String() string {
@@ -76,7 +78,7 @@ func (instance *ApplyObject) Execute(dry DryRunOn) (err error) {
 	} else if err != nil {
 		return err
 	} else {
-		originalResource, err := GetObjectResource(original, instance.object.Client)
+		originalResource, err := GetObjectResource(original, instance.object.Client, instance.objectValidator)
 		if err != nil {
 			return err
 		}
@@ -130,7 +132,7 @@ func (instance *ApplyObject) Wait(timeout time.Duration) (err error) {
 		return fmt.Errorf("cannot retrieve generation of object to be applied")
 	}
 
-	resource, rErr := GetObjectResource(instance.applied, instance.object.Client)
+	resource, rErr := GetObjectResource(instance.applied, instance.object.Client, instance.objectValidator)
 	if rErr != nil {
 		err = rErr
 		return
@@ -175,7 +177,7 @@ func (instance *ApplyObject) watchRun(resource ObjectResource, generation int64,
 		}
 		select {
 		case event := <-w.ResultChan():
-			eventObjectInfo, _ := GetObjectInfo(event.Object)
+			eventObjectInfo, _ := GetObjectInfo(event.Object, instance.objectValidator)
 			ld := l.WithDeepFieldOn("event", event, log.IsTraceEnabled)
 			ld.WithField("event", event).
 				Trace("Received event %v on %v.", event.Type, eventObjectInfo)

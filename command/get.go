@@ -8,7 +8,6 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer/json"
-	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes/scheme"
 	"os"
 )
@@ -49,9 +48,9 @@ func (instance *Get) ConfigureCliCommands(context string, hc common.HasCommands,
 
 func (instance *Get) RunWithArguments(arguments Arguments) error {
 	task := &getTask{
-		source:        instance,
-		dynamicClient: arguments.DynamicClient,
-		first:         true,
+		source:    instance,
+		arguments: arguments,
+		first:     true,
 	}
 	oh, err := model.NewObjectHandler(task.onObject, arguments.Project)
 	if err != nil {
@@ -67,9 +66,9 @@ func (instance *Get) RunWithArguments(arguments Arguments) error {
 }
 
 type getTask struct {
-	source        *Get
-	dynamicClient dynamic.Interface
-	first         bool
+	source    *Get
+	arguments Arguments
+	first     bool
 }
 
 func (instance *getTask) onObject(source string, _ runtime.Object, unstructured *unstructured.Unstructured) error {
@@ -79,7 +78,7 @@ func (instance *getTask) onObject(source string, _ runtime.Object, unstructured 
 		return nil
 	}
 
-	resource, err := kubernetes.GetObjectResource(unstructured, instance.dynamicClient)
+	resource, err := kubernetes.GetObjectResource(unstructured, instance.arguments.DynamicClient, instance.arguments.Project.Validation.Schema)
 	if err != nil {
 		return err
 	}

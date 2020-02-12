@@ -15,8 +15,8 @@ type ObjectResource struct {
 	Object   *unstructured.Unstructured
 }
 
-func GetObjectResource(object *unstructured.Unstructured, client dynamic.Interface) (ObjectResource, error) {
-	info, err := GetObjectInfo(object)
+func GetObjectResource(object *unstructured.Unstructured, client dynamic.Interface, by ObjectValidator) (ObjectResource, error) {
+	info, err := GetObjectInfo(object, by)
 	if err != nil {
 		return ObjectResource{}, err
 	}

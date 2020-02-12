@@ -93,7 +93,7 @@ func (instance *Apply) RunWithArguments(arguments Arguments) error {
 	task := &applyTask{
 		source:        instance,
 		dynamicClient: arguments.DynamicClient,
-		runtime:       arguments.Runtime,
+		arguments:     arguments,
 	}
 	oh, err := model.NewObjectHandler(task.onObject, arguments.Project)
 	if err != nil {
@@ -136,7 +136,7 @@ type applyTask struct {
 	source        *Apply
 	dynamicClient dynamic.Interface
 	applySet      kubernetes.ApplySet
-	runtime       kubernetes.Runtime
+	arguments     Arguments
 }
 
 func (instance *applyTask) onObject(source string, _ runtime.Object, unstructured *unstructured.Unstructured) error {
@@ -146,7 +146,7 @@ func (instance *applyTask) onObject(source string, _ runtime.Object, unstructure
 		return nil
 	}
 
-	apply, err := kubernetes.NewApplyObject(source, unstructured, instance.dynamicClient, instance.runtime)
+	apply, err := kubernetes.NewApplyObject(source, unstructured, instance.dynamicClient, instance.arguments.Runtime, instance.arguments.Project.Validation.Schema)
 	if err != nil {
 		return err
 	}
