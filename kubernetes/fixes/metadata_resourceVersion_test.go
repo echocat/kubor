@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-func Test_updateFixForV1ServiceIfClusterIpIsAbsent_ignores_different_GroupVersionKinds(t *testing.T) {
+func Test_updateFixForResourceVersionIsAbsent_ignores_different_GroupVersionKinds(t *testing.T) {
 	g := NewGomegaWithT(t)
 
 	original := unstructured.Unstructured{
@@ -22,12 +22,12 @@ func Test_updateFixForV1ServiceIfClusterIpIsAbsent_ignores_different_GroupVersio
 		},
 	}
 	target := expectedTarget
-	err := updateFixForV1ServiceIfClusterIpIsAbsent(original, &target)
+	err := updateFixForResourceVersionIsAbsent(original, &target)
 	g.Expect(err).To(BeNil())
 	g.Expect(target).To(Equal(expectedTarget))
 }
 
-func Test_updateFixForV1ServiceIfClusterIpIsAbsent_ignores_on_non_Service_kind(t *testing.T) {
+func Test_updateFixForResourceVersionIsAbsent_ignores_on_non_Service_kind(t *testing.T) {
 	g := NewGomegaWithT(t)
 
 	original := unstructured.Unstructured{
@@ -38,12 +38,12 @@ func Test_updateFixForV1ServiceIfClusterIpIsAbsent_ignores_on_non_Service_kind(t
 	}
 	expectedTarget := original
 	target := original
-	err := updateFixForV1ServiceIfClusterIpIsAbsent(original, &target)
+	err := updateFixForResourceVersionIsAbsent(original, &target)
 	g.Expect(err).To(BeNil())
 	g.Expect(target).To(Equal(expectedTarget))
 }
 
-func Test_updateFixForV1ServiceIfClusterIpIsAbsent_ignores_on_non_v1_version(t *testing.T) {
+func Test_updateFixForResourceVersionIsAbsent_ignores_on_non_v1_version(t *testing.T) {
 	g := NewGomegaWithT(t)
 
 	original := unstructured.Unstructured{
@@ -54,19 +54,19 @@ func Test_updateFixForV1ServiceIfClusterIpIsAbsent_ignores_on_non_v1_version(t *
 	}
 	expectedTarget := original
 	target := original
-	err := updateFixForV1ServiceIfClusterIpIsAbsent(original, &target)
+	err := updateFixForResourceVersionIsAbsent(original, &target)
 	g.Expect(err).To(BeNil())
 	g.Expect(target).To(Equal(expectedTarget))
 }
 
-func Test_updateFixForV1ServiceIfClusterIpIsAbsent_ignores_if_original_has_no_clusterIp(t *testing.T) {
+func Test_updateFixForResourceVersionIsAbsent_ignores_if_original_has_no_resourceVersion(t *testing.T) {
 	g := NewGomegaWithT(t)
 
 	original := unstructured.Unstructured{
 		Object: map[string]interface{}{
 			"apiVersion": "v1",
 			"kind":       "Service",
-			"spec": map[string]interface{}{
+			"metadata": map[string]interface{}{
 				"foo": "bar",
 			},
 		},
@@ -83,20 +83,20 @@ func Test_updateFixForV1ServiceIfClusterIpIsAbsent_ignores_if_original_has_no_cl
 			"kind":       "Service",
 		},
 	}
-	err := updateFixForV1ServiceIfClusterIpIsAbsent(original, &target)
+	err := updateFixForResourceVersionIsAbsent(original, &target)
 	g.Expect(err).To(BeNil())
 	g.Expect(expectedTarget).To(Equal(target))
 }
 
-func Test_updateFixForV1ServiceIfClusterIpIsAbsent_ignores_if_original_clusterIp_is_not_a_string(t *testing.T) {
+func Test_updateFixForResourceVersionIsAbsent_ignores_if_original_resourceVersion_is_not_a_string(t *testing.T) {
 	g := NewGomegaWithT(t)
 
 	original := unstructured.Unstructured{
 		Object: map[string]interface{}{
 			"apiVersion": "v1",
 			"kind":       "Service",
-			"spec": map[string]interface{}{
-				"clusterIP": 666,
+			"metadata": map[string]interface{}{
+				"resourceVersion": 666,
 			},
 		},
 	}
@@ -112,20 +112,20 @@ func Test_updateFixForV1ServiceIfClusterIpIsAbsent_ignores_if_original_clusterIp
 			"kind":       "Service",
 		},
 	}
-	err := updateFixForV1ServiceIfClusterIpIsAbsent(original, &target)
+	err := updateFixForResourceVersionIsAbsent(original, &target)
 	g.Expect(err).To(BeNil())
 	g.Expect(target).To(Equal(expectedTarget))
 }
 
-func Test_updateFixForV1ServiceIfClusterIpIsAbsent_fails_if_target_has_spec_which_is_not_a_map(t *testing.T) {
+func Test_updateFixForResourceVersionIsAbsent_fails_if_target_has_metadata_which_is_not_a_map(t *testing.T) {
 	g := NewGomegaWithT(t)
 
 	original := unstructured.Unstructured{
 		Object: map[string]interface{}{
 			"apiVersion": "v1",
 			"kind":       "Service",
-			"spec": map[string]interface{}{
-				"clusterIP": "1.2.3.4",
+			"metadata": map[string]interface{}{
+				"resourceVersion": "1.2.3.4",
 			},
 		},
 	}
@@ -133,23 +133,23 @@ func Test_updateFixForV1ServiceIfClusterIpIsAbsent_fails_if_target_has_spec_whic
 		Object: map[string]interface{}{
 			"apiVersion": "v1",
 			"kind":       "Service",
-			"spec":       666,
+			"metadata":   666,
 		},
 	}
-	err := updateFixForV1ServiceIfClusterIpIsAbsent(original, &target)
+	err := updateFixForResourceVersionIsAbsent(original, &target)
 	g.Expect(err).ToNot(BeNil())
-	g.Expect(err.Error()).To(Equal("'spec' property of target does already exists but is not of type map[string]interface{} it is int"))
+	g.Expect(err.Error()).To(Equal("'metadata' property of target does already exists but is not of type map[string]interface{} it is int"))
 }
 
-func Test_updateFixForV1ServiceIfClusterIpIsAbsent_set_spec_and_clusterIP(t *testing.T) {
+func Test_updateFixForResourceVersionIsAbsent_set_metadata_and_resourceVersion(t *testing.T) {
 	g := NewGomegaWithT(t)
 
 	original := unstructured.Unstructured{
 		Object: map[string]interface{}{
 			"apiVersion": "v1",
 			"kind":       "Service",
-			"spec": map[string]interface{}{
-				"clusterIP": "1.2.3.4",
+			"metadata": map[string]interface{}{
+				"resourceVersion": "1.2.3.4",
 			},
 		},
 	}
@@ -160,20 +160,20 @@ func Test_updateFixForV1ServiceIfClusterIpIsAbsent_set_spec_and_clusterIP(t *tes
 			"kind":       "Service",
 		},
 	}
-	err := updateFixForV1ServiceIfClusterIpIsAbsent(original, &target)
+	err := updateFixForResourceVersionIsAbsent(original, &target)
 	g.Expect(err).To(BeNil())
 	g.Expect(target).To(Equal(expectedTarget))
 }
 
-func Test_updateFixForV1ServiceIfClusterIpIsAbsent_set_clusterIP(t *testing.T) {
+func Test_updateFixForResourceVersionIsAbsent_set_resourceVersion(t *testing.T) {
 	g := NewGomegaWithT(t)
 
 	original := unstructured.Unstructured{
 		Object: map[string]interface{}{
 			"apiVersion": "v1",
 			"kind":       "Service",
-			"spec": map[string]interface{}{
-				"clusterIP": "1.2.3.4",
+			"metadata": map[string]interface{}{
+				"resourceVersion": "1.2.3.4",
 			},
 		},
 	}
@@ -181,9 +181,9 @@ func Test_updateFixForV1ServiceIfClusterIpIsAbsent_set_clusterIP(t *testing.T) {
 		Object: map[string]interface{}{
 			"apiVersion": "v1",
 			"kind":       "Service",
-			"spec": map[string]interface{}{
-				"foo":       "bar",
-				"clusterIP": "1.2.3.4",
+			"metadata": map[string]interface{}{
+				"foo":             "bar",
+				"resourceVersion": "1.2.3.4",
 			},
 		},
 	}
@@ -191,12 +191,12 @@ func Test_updateFixForV1ServiceIfClusterIpIsAbsent_set_clusterIP(t *testing.T) {
 		Object: map[string]interface{}{
 			"apiVersion": "v1",
 			"kind":       "Service",
-			"spec": map[string]interface{}{
+			"metadata": map[string]interface{}{
 				"foo": "bar",
 			},
 		},
 	}
-	err := updateFixForV1ServiceIfClusterIpIsAbsent(original, &target)
+	err := updateFixForResourceVersionIsAbsent(original, &target)
 	g.Expect(err).To(BeNil())
 	g.Expect(target).To(Equal(expectedTarget))
 }
