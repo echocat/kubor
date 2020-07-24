@@ -71,14 +71,15 @@ func (instance Function) createExecutionArguments(ft reflect.Type, context templ
 		pt := ft.In(i)
 		if pt == executionContextType {
 			result[i] = reflect.ValueOf(context)
-		} else {
-			var arg interface{}
-			var leftArgs []interface{}
-			if len(args) > argIndex {
-				arg = args[argIndex]
-				leftArgs = args[argIndex+1:]
+		} else if ft.IsVariadic() {
+			if pv, err := instance.createExecutionVarargArgument(argIndex, pt, args[argIndex:]); err != nil {
+				return []reflect.Value{}, err
+			} else {
+				result[i] = pv
+				break
 			}
-			if pv, err := instance.createExecutionArgument(argIndex, ft, pt, arg, leftArgs); err != nil {
+		} else {
+			if pv, err := instance.createExecutionArgument(argIndex, pt, args[argIndex]); err != nil {
 				return []reflect.Value{}, err
 			} else {
 				result[i] = pv
@@ -90,17 +91,31 @@ func (instance Function) createExecutionArguments(ft reflect.Type, context templ
 	return result, nil
 }
 
-func (instance Function) createExecutionArgument(index int, ft reflect.Type, pt reflect.Type, arg interface{}, leftArgs []interface{}) (reflect.Value, error) {
-	if arg == nil {
-		return reflect.New(pt).Elem(), nil
-	}
-	av := reflect.ValueOf(arg)
-	if ft.IsVariadic() {
-		av = reflect.MakeSlice(pt, 1+len(leftArgs), 1+len(leftArgs))
-		av.Index(0).Set(reflect.ValueOf(arg))
-		for i := 0; i < len(leftArgs); i++ {
-			av.Index(i + 1).Set(reflect.ValueOf(leftArgs[i]))
+func (instance Function) createExecutionArgument(index int, pt reflect.Type, arg interface{}) (reflect.Value, error) {
+	valOf := func(pt reflect.Type, in interface{}) reflect.Value {
+		if in != nil {
+			return reflect.ValueOf(in)
 		}
+		return reflect.New(pt).Elem()
+	}
+	av := valOf(pt, arg)
+	at := av.Type()
+	if !at.AssignableTo(pt) {
+		return reflect.Value{}, fmt.Errorf("%v is not assignable to %v for argument #%d", at, pt, index)
+	}
+	return av, nil
+}
+
+func (instance Function) createExecutionVarargArgument(index int, pt reflect.Type, args []interface{}) (reflect.Value, error) {
+	valOf := func(pt reflect.Type, in interface{}) reflect.Value {
+		if in != nil {
+			return reflect.ValueOf(in)
+		}
+		return reflect.New(pt).Elem()
+	}
+	av := reflect.MakeSlice(pt, len(args), len(args))
+	for i := 0; i < len(args); i++ {
+		av.Index(i).Set(valOf(pt, args[i]))
 	}
 	at := av.Type()
 	if !at.AssignableTo(pt) {

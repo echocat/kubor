@@ -7,6 +7,7 @@ import (
 
 func Test_FuncMap(t *testing.T) {
 	assert.Equal(t, mustExecuteTemplate(t, `{{ map }}`, nil), "map[]")
+	assert.Equal(t, mustExecuteTemplate(t, `{{ (map "foo" nil).foo | default "bar" }}`, nil), "bar")
 	assert.Equal(t, mustExecuteTemplate(t, `{{ (map "foo" 666).foo }}`, nil), "666")
 	assert.Equal(t, mustExecuteTemplate(t, `{{ $m := map "foo" 666 "bar" 123 "xyz" . }}
 	                                        {{- $m.foo}},{{$m.bar}},{{$m.xyz}}`, "hello"), "666,123,hello")
