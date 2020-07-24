@@ -73,19 +73,72 @@ var FuncOptional = Function{
 })
 
 var FuncContains = Function{
-	Description: `Checks if the given <input> string contains the given <search> string.`,
+	Description: `Checks if the given <input> contains the given <search> element. If the input is a string this will reflect a part of the string, if slice an element of the slice, if map/object a key of the map/object.`,
 	Parameters: Parameters{{
 		Name: "search",
 	}, {
 		Name: "input",
 	}},
 }.MustWithFunc(func(search interface{}, input interface{}) (bool, error) {
-	if s, ok := input.(string); ok {
-		return strings.Contains(s, fmt.Sprint(search)), nil
-	} else if s, ok := input.(*string); ok {
-		return strings.Contains(*s, fmt.Sprint(search)), nil
+	v := reflect.ValueOf(input)
+	if v.Kind() == reflect.Ptr && v.IsNil() {
+		return false, nil
 	}
-	return false, fmt.Errorf("currently contains only supports strings but got: %v", reflect.TypeOf(input))
+	for v.Kind() == reflect.Ptr {
+		v = v.Elem()
+	}
+	for v.Kind() == reflect.Interface {
+		v = v.Elem()
+	}
+	t := v.Type()
+	switch v.Kind() {
+	case reflect.String:
+		return strings.Contains(v.String(), fmt.Sprint(search)), nil
+	case reflect.Struct:
+		key := fmt.Sprint(search)
+		_, ok := t.FieldByName(key)
+		return ok, nil
+	case reflect.Map:
+		key := reflect.ValueOf(search)
+		value := v.MapIndex(key)
+		return value.IsValid(), nil
+	case reflect.Slice, reflect.Array:
+		for i := 0; i < v.Len(); i++ {
+			candidate := v.Index(i)
+			if candidate.IsValid() && reflect.DeepEqual(candidate.Interface(), search) {
+				return true, nil
+			}
+		}
+		return false, nil
+	default:
+		return false, fmt.Errorf("currently contains only supports either strings, maps, structs, arrays or slices but got: %v", reflect.TypeOf(input))
+	}
+})
+
+var FuncMap = Function{
+	Description: `Creates from the given key to value pair a new map.`,
+	Parameters: Parameters{{
+		Name: "input",
+	}},
+}.MustWithFunc(func(in ...interface{}) (map[interface{}]interface{}, error) {
+	if len(in)%2 != 0 {
+		return nil, fmt.Errorf("expect always a key to value pair, this means the amount of parameters needs to be dividable by two, but got: %d", len(in))
+	}
+	result := make(map[interface{}]interface{}, len(in)/2)
+	for i := 0; i < len(in); i += 2 {
+		key, value := in[i], in[i+1]
+		result[key] = value
+	}
+	return result, nil
+})
+
+var FuncSlice = Function{
+	Description: `Creates from the given values a new slice.`,
+	Parameters: Parameters{{
+		Name: "input",
+	}},
+}.MustWithFunc(func(in ...interface{}) ([]interface{}, error) {
+	return in, nil
 })
 
 var FuncsGeneral = Functions{
@@ -94,6 +147,9 @@ var FuncsGeneral = Functions{
 	"isNotEmpty": FuncIsNotEmpty,
 	"default":    FuncDefault,
 	"contains":   FuncContains,
+	"map":        FuncMap,
+	"slice":      FuncSlice,
+	"array":      FuncSlice,
 }
 var CategoryGeneral = Category{
 	Functions: FuncsGeneral,

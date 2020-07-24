@@ -1,6 +1,8 @@
 package functions
 
-import "github.com/echocat/kubor/template"
+import (
+	"github.com/echocat/kubor/template"
+)
 
 type Category struct {
 	Functions Functions
@@ -102,6 +104,7 @@ func (instance Categories) FilterBy(predicate FunctionPredicate) (Categories, er
 }
 
 var CategoriesDefault = Categories{
+	"codecs":        CategoryCodecs,
 	"conversations": CategoryConversations,
 	"general":       CategoryGeneral,
 	"math":          CategoryMath,

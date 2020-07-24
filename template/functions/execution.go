@@ -44,17 +44,26 @@ func (instance Function) evaluateResult(out ...reflect.Value) (interface{}, erro
 func (instance Function) createExecutionArguments(ft reflect.Type, context template.ExecutionContext, args ...interface{}) ([]reflect.Value, error) {
 	result := make([]reflect.Value, ft.NumIn())
 
-	numberOfParameters := 0
+	variadic := false
+	numberOfRequiredParameters := 0
 	for i := 0; i < ft.NumIn(); i++ {
 		switch ft.In(i) {
 		case executionContextType:
 		default:
-			numberOfParameters++
+			if !ft.IsVariadic() {
+				numberOfRequiredParameters++
+			} else {
+				variadic = true
+			}
 		}
 	}
 
-	if len(args) != numberOfParameters {
-		return []reflect.Value{}, fmt.Errorf("wrong number of args: want %d got %d", numberOfParameters, len(args))
+	if variadic {
+		if len(args) < numberOfRequiredParameters {
+			return []reflect.Value{}, fmt.Errorf("wrong number of args: need at least %d got %d", numberOfRequiredParameters, len(args))
+		}
+	} else if len(args) != numberOfRequiredParameters {
+		return []reflect.Value{}, fmt.Errorf("wrong number of args: want %d got %d", numberOfRequiredParameters, len(args))
 	}
 
 	var argIndex int
@@ -62,22 +71,37 @@ func (instance Function) createExecutionArguments(ft reflect.Type, context templ
 		pt := ft.In(i)
 		if pt == executionContextType {
 			result[i] = reflect.ValueOf(context)
-		} else if pv, err := instance.createExecutionArgument(argIndex, ft, pt, args[argIndex]); err != nil {
-			return []reflect.Value{}, err
 		} else {
-			result[i] = pv
-			argIndex++
+			var arg interface{}
+			var leftArgs []interface{}
+			if len(args) > argIndex {
+				arg = args[argIndex]
+				leftArgs = args[argIndex+1:]
+			}
+			if pv, err := instance.createExecutionArgument(argIndex, ft, pt, arg, leftArgs); err != nil {
+				return []reflect.Value{}, err
+			} else {
+				result[i] = pv
+				argIndex++
+			}
 		}
 	}
 
 	return result, nil
 }
 
-func (instance Function) createExecutionArgument(index int, ft reflect.Type, pt reflect.Type, arg interface{}) (reflect.Value, error) {
+func (instance Function) createExecutionArgument(index int, ft reflect.Type, pt reflect.Type, arg interface{}, leftArgs []interface{}) (reflect.Value, error) {
 	if arg == nil {
-		return reflect.New(pt), nil
+		return reflect.New(pt).Elem(), nil
 	}
 	av := reflect.ValueOf(arg)
+	if ft.IsVariadic() {
+		av = reflect.MakeSlice(pt, 1+len(leftArgs), 1+len(leftArgs))
+		av.Index(0).Set(reflect.ValueOf(arg))
+		for i := 0; i < len(leftArgs); i++ {
+			av.Index(i + 1).Set(reflect.ValueOf(leftArgs[i]))
+		}
+	}
 	at := av.Type()
 	if !at.AssignableTo(pt) {
 		return reflect.Value{}, fmt.Errorf("%v is not assignable to %v for argument #%d", at, pt, index)
