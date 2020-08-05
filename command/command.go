@@ -9,7 +9,7 @@ import (
 )
 
 type Arguments struct {
-	Project       model.Project
+	Project       *model.Project
 	Runtime       kubernetes.Runtime
 	DynamicClient dynamic.Interface
 }
@@ -28,11 +28,11 @@ func (instance *Command) Init(pf *model.ProjectFactory) error {
 	return nil
 }
 
-func (instance *Command) createProject(runtime kubernetes.Runtime) (model.Project, error) {
+func (instance *Command) createProject(runtime kubernetes.Runtime) (*model.Project, error) {
 	if instance.ProjectFactory == nil {
-		return model.Project{}, fmt.Errorf("command not yet initialized")
+		return nil, fmt.Errorf("command not yet initialized")
 	}
-	return instance.ProjectFactory.Create(runtime)
+	return instance.ProjectFactory.Create(runtime.ContextName())
 }
 
 func (instance *Command) ExecuteFromCli(*kingpin.ParseContext) error {

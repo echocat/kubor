@@ -3,7 +3,6 @@ package model
 import (
 	"fmt"
 	"github.com/echocat/kubor/common"
-	"github.com/echocat/kubor/kubernetes"
 	"github.com/echocat/kubor/log"
 	"gopkg.in/yaml.v2"
 	"io"
@@ -17,8 +16,11 @@ type Project struct {
 	GroupId           string              `yaml:"groupId,omitempty" json:"groupId,omitempty"`
 	ArtifactId        string              `yaml:"artifactId" json:"artifactId"`
 	Release           string              `yaml:"release,omitempty" json:"release,omitempty"`
+	Stages            Stages              `yaml:"stages,omitempty" json:"stages,omitempty"`
 	Templating        Templating          `yaml:"templating,omitempty" json:"templating,omitempty"`
 	ConditionalValues []ConditionalValues `yaml:"values,omitempty" json:"values,omitempty"`
+	Labels            Labels              `yaml:"labels,omitempty" json:"labels,omitempty"`
+	Annotations       Annotations         `yaml:"annotations,omitempty" json:"annotations,omitempty"`
 	Validation        Validation          `yaml:"validation,omitempty" json:"validation,omitempty"`
 
 	// Values set using implicitly.
@@ -29,11 +31,13 @@ type Project struct {
 	Context string            `yaml:"-" json:"-"`
 }
 
-func newProject() Project {
-	return Project{
+func newProject() *Project {
+	return &Project{
 		Templating:        newTemplating(),
 		ConditionalValues: []ConditionalValues{},
 		Values:            Values{},
+		Labels:            newLabels(),
+		Annotations:       newAnnotations(),
 	}
 }
 
@@ -70,7 +74,6 @@ func (instance Project) RenderedTemplateFile(file string, writer io.Writer) erro
 }
 
 type ProjectFactory struct {
-	kubernetes.Runtime
 	source         string
 	sourceRequired bool
 	values         Values
@@ -83,32 +86,32 @@ func NewProjectFactory() *ProjectFactory {
 	return &ProjectFactory{}
 }
 
-func (instance *ProjectFactory) Create(runtime kubernetes.Runtime) (Project, error) {
+func (instance *ProjectFactory) Create(context string) (*Project, error) {
 	result := newProject()
-	result.Context = runtime.ContextName()
+	result.Context = context
 
 	if source, err := instance.resolveSource(); os.IsNotExist(err) {
 		if instance.sourceRequired {
-			return Project{}, fmt.Errorf("could not find source file '%s'", instance.source)
+			return nil, fmt.Errorf("could not find source file '%s'", instance.source)
 		}
 	} else if err != nil {
-		return Project{}, fmt.Errorf("cannot open source file '%s': %v", instance.source, err)
+		return nil, fmt.Errorf("cannot open source file '%s': %v", instance.source, err)
 	} else if f, err := os.Open(source); err != nil {
-		return Project{}, fmt.Errorf("cannot open source file '%s': %v", source, err)
+		return nil, fmt.Errorf("cannot open source file '%s': %v", source, err)
 	} else {
 		//noinspection GoUnhandledErrorResult
 		defer f.Close()
 		if err := yaml.NewDecoder(f).Decode(&result); err != nil {
-			return Project{}, fmt.Errorf("cannot read source file '%s': %v", source, err)
+			return nil, fmt.Errorf("cannot read source file '%s': %v", source, err)
 		} else if err := result.Validate(); err != nil {
-			return Project{}, fmt.Errorf("cannot read source file '%s': %v", source, err)
+			return nil, fmt.Errorf("cannot read source file '%s': %v", source, err)
 		}
 
 		if result, err = instance.populateStage1(source, result); err != nil {
-			return Project{}, err
+			return nil, err
 		}
 		if result, err = instance.populateStage2(result); err != nil {
-			return Project{}, err
+			return nil, err
 		}
 	}
 
@@ -168,8 +171,8 @@ func (instance *ProjectFactory) resolveSource() (string, error) {
 	}
 }
 
-func (instance *ProjectFactory) populateStage1(source string, input Project) (Project, error) {
-	result := input
+func (instance *ProjectFactory) populateStage1(source string, input *Project) (*Project, error) {
+	result := *input
 	result.Source = source
 	result.Root = filepath.Dir(result.Source)
 	result.Values = Values{}
@@ -189,20 +192,20 @@ func (instance *ProjectFactory) populateStage1(source string, input Project) (Pr
 		result.Release = "latest"
 	}
 	result.Env = common.Environ()
-	return result, nil
+	return &result, nil
 }
 
-func (instance *ProjectFactory) populateStage2(input Project) (Project, error) {
-	result := input
+func (instance *ProjectFactory) populateStage2(input *Project) (*Project, error) {
+	result := *input
 	for _, candidate := range input.ConditionalValues {
 		if ok, err := candidate.On.Matches(result); err != nil {
-			return Project{}, err
+			return nil, err
 		} else if ok {
 			result.Values = result.Values.MergeWith(candidate.Values)
 			result.Values = result.Values.MergeWith(instance.values)
 		}
 	}
-	return result, nil
+	return &result, nil
 }
 
 func (instance *ProjectFactory) ConfigureFlags(hf common.HasFlags) {

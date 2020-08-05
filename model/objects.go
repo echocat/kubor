@@ -19,7 +19,7 @@ type ContentProvider func() (name string, content []byte, err error)
 
 type OnObject func(source string, object runtime.Object, unstructured *unstructured.Unstructured) error
 
-func NewObjectHandler(onObject OnObject, project Project) (*ObjectHandler, error) {
+func NewObjectHandler(onObject OnObject, project *Project) (*ObjectHandler, error) {
 	return &ObjectHandler{
 		OnObject:     onObject,
 		Project:      project,
@@ -29,7 +29,7 @@ func NewObjectHandler(onObject OnObject, project Project) (*ObjectHandler, error
 
 type ObjectHandler struct {
 	OnObject OnObject
-	Project  Project
+	Project  *Project
 
 	Deserializer runtime.Decoder
 }

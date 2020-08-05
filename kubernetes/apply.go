@@ -3,12 +3,14 @@ package kubernetes
 import (
 	"fmt"
 	"github.com/echocat/kubor/common"
-	"github.com/echocat/kubor/kubernetes/fixes"
+	"github.com/echocat/kubor/kubernetes/transformation"
 	"github.com/echocat/kubor/log"
+	"github.com/echocat/kubor/model"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/dynamic"
 	"reflect"
 	"time"
@@ -16,21 +18,35 @@ import (
 
 type Apply interface {
 	Execute(DryRunOn) error
-	Wait(timeout time.Duration) error
+	Wait(wu model.WaitUntil) (relevantDuration time.Duration, err error)
 	Rollback()
 	String() string
 }
 
-func NewApplyObject(source string, object *unstructured.Unstructured, client dynamic.Interface, runtime Runtime, objectValidator ObjectValidator) (*ApplyObject, error) {
+func NewApplyObject(
+	project *model.Project,
+	source string,
+	object *unstructured.Unstructured,
+	client dynamic.Interface,
+	runtime Runtime,
+	objectValidator ObjectValidator,
+) (*ApplyObject, error) {
 	objectResource, err := GetObjectResource(object, client, objectValidator)
 	if err != nil {
 		return nil, err
 	}
 
+	stage, err := project.Annotations.GetStageFor(object)
+	if err != nil {
+		return nil, err
+	}
+
 	return &ApplyObject{
+		project: project,
 		log: log.
 			WithField("source", source).
-			WithField("object", objectResource),
+			WithField("object", objectResource).
+			WithField("stage", stage),
 		object:          objectResource,
 		runtime:         runtime,
 		objectValidator: objectValidator,
@@ -41,6 +57,7 @@ type ApplyObject struct {
 	log               log.Logger
 	KeepAliveInterval time.Duration
 
+	project  *model.Project
 	object   ObjectResource
 	original *ObjectResource
 
@@ -61,16 +78,27 @@ func (instance *ApplyObject) Execute(dry DryRunOn) (err error) {
 	if dry, err = instance.resolveDryRunOn(dry); err != nil {
 		return err
 	}
+	applyOn, err := instance.project.Annotations.GetApplyOnFor(instance.object.Object)
+	if err != nil {
+		return err
+	}
 	l := instance.log.
 		WithField("action", "checkExistence")
 	original, err := instance.object.Get(nil)
 	if errors.IsNotFound(err) {
+		if !applyOn.OnCreate() {
+			l.
+				WithField("status", "skipped").
+				Debug("%v does not exist but should not be created - skipping.", instance.object)
+			return nil
+		}
+
 		l.
 			WithField("status", "notFound").
 			Debug("%v does not exist - it will be created.", instance.object)
 		instance.original = nil
 
-		if err := fixes.FixForCreate(instance.object.Object); err != nil {
+		if err := transformation.TransformForCreate(instance.project, instance.object.Object); err != nil {
 			return err
 		}
 
@@ -78,6 +106,13 @@ func (instance *ApplyObject) Execute(dry DryRunOn) (err error) {
 	} else if err != nil {
 		return err
 	} else {
+		if !applyOn.OnUpdate() {
+			l.
+				WithField("status", "skipped").
+				Debug("%v does exist but should not be updated - skipping.", instance.object)
+			return nil
+		}
+
 		originalResource, err := GetObjectResource(original, instance.object.Client, instance.objectValidator)
 		if err != nil {
 			return err
@@ -88,7 +123,7 @@ func (instance *ApplyObject) Execute(dry DryRunOn) (err error) {
 			WithDeepFieldOn("response", original, l.IsDebugEnabled).
 			Debug("%v does exist - it will be updated.", instance.object)
 
-		if err := fixes.FixForUpdate(*original, instance.object.Object); err != nil {
+		if err := transformation.TransformForUpdate(instance.project, *original, instance.object.Object); err != nil {
 			return err
 		}
 
@@ -96,11 +131,13 @@ func (instance *ApplyObject) Execute(dry DryRunOn) (err error) {
 	}
 }
 
-func (instance *ApplyObject) Wait(timeout time.Duration) (err error) {
+func (instance *ApplyObject) Wait(global model.WaitUntil) (relevantDuration time.Duration, err error) {
+	wu := global
+	wuf := wu.AsLazyFormatter("{{with .Timeout}}for {{.}} {{end}}")
+	skip := false
 	start := time.Now()
 	l := instance.log.
-		WithField("action", "wait").
-		WithField("timeout", timeout)
+		WithField("action", "wait")
 	defer func() {
 		ld := l.WithField("duration", time.Now().Sub(start))
 		if err != nil {
@@ -108,58 +145,84 @@ func (instance *ApplyObject) Wait(timeout time.Duration) (err error) {
 				WithError(err).
 				WithField("status", "failed")
 			if ldd.IsDebugEnabled() {
-				ldd.Error("Wait for %v until %v is ready... FAILED!", timeout, instance.object)
+				ldd.Error("Wait %vuntil %v is ready... FAILED!", wuf, instance.object)
 			} else {
-				ldd.Error("%v was not ready after %v.", instance.object, timeout)
+				ldd.Error("%v was not ready after %v.", instance.object, wuf)
+			}
+		} else if skip {
+			ldd := ld.WithField("status", "skipped")
+			if ldd.IsDebugEnabled() {
+				ldd.Info("Wait %vuntil %v is ready... SKIPPED!", wuf, instance.object)
 			}
 		} else {
-			ldd := ld.
-				WithField("status", "success")
+			ldd := ld.WithField("status", "success")
 			if ldd.IsDebugEnabled() {
-				ldd.Info("Wait for %v until %v is ready... DONE!", timeout, instance.object)
+				ldd.Info("Wait %vuntil %v is ready... DONE!", wuf, instance.object)
 			} else {
 				ldd.Info("%v is ready.", instance.object)
 			}
 		}
 	}()
-	l.Debug("Wait for %v until %v is ready...", timeout, instance.object)
+
+	owu, wuErr := instance.project.Annotations.GetWaitUntilFor(instance.object.Object)
+	if wuErr != nil {
+		return 0, wuErr
+	}
+	wu = wu.MergeWith(owu)
+	wuf.WaitUntil = wu
+
+	if to := wu.Timeout; to != nil {
+		l = l.WithField("timeout", *to)
+	} else {
+		l = l.WithField("timeout", "unlimited")
+	}
+	l.Debug("Wait %vuntil %v is ready...", wuf, instance.object)
+
+	if wu.Stage == model.WaitUntilStageNever {
+		skip = true
+		return
+	}
 
 	if instance.applied == nil {
 		return
 	}
 	generation := instance.getGenerationOf(instance.applied)
 	if generation == nil {
-		return fmt.Errorf("cannot retrieve generation of object to be applied")
+		return 0, fmt.Errorf("cannot retrieve generation of object to be applied")
 	}
 
 	resource, rErr := GetObjectResource(instance.applied, instance.object.Client, instance.objectValidator)
 	if rErr != nil {
-		err = rErr
-		return
+		return 0, rErr
 	}
 	for {
-		cTimeout := timeout - time.Now().Sub(start)
-		if cTimeout <= 0 {
-			err = common.NewTimeoutError("%v was not ready after %v", resource, timeout)
-			return
-		} else if instance.KeepAliveInterval > 0 && cTimeout > instance.KeepAliveInterval {
-			cTimeout = instance.KeepAliveInterval
+		var timeout time.Duration
+		if to := wu.Timeout; to != nil {
+			timeout = *to - time.Now().Sub(start)
+			if timeout <= 0 {
+				return 0, common.NewTimeoutError("%v was not ready after %v", resource, *to)
+			} else if instance.KeepAliveInterval > 0 && timeout > instance.KeepAliveInterval {
+				timeout = instance.KeepAliveInterval
+			}
 		}
-		if done, wErr := instance.watchRun(resource, *generation, cTimeout, l); wErr != nil || done {
-			err = wErr
-			return
+		if done, wErr := instance.watchRun(resource, *generation, timeout, l); wErr != nil || done {
+			if owu.Stage == model.WaitUntilStageDefault {
+				relevantDuration = time.Now().Sub(start)
+			}
+			return 0, wErr
 		}
 		duration := time.Now().Sub(start)
 		l.
 			WithField("duration", duration).
-			Info("%v is still not ready after %v. Continue wait for max %v...", resource, duration, timeout-duration)
+			WithField("status", "continue").
+			Info("%v is still not ready after %v. Continue waiting...", resource, duration)
 	}
 }
 
-func (instance *ApplyObject) watchRun(resource ObjectResource, generation int64, timeout time.Duration, l log.Logger) (bool, error) {
-	w, err := resource.Watch(nil)
-	if err != nil {
-		return false, err
+func (instance *ApplyObject) watchRun(resource ObjectResource, generation int64, timeout time.Duration, l log.Logger) (done bool, err error) {
+	w, wErr := resource.Watch(nil)
+	if wErr != nil {
+		return false, wErr
 	}
 	defer w.Stop()
 	get, err := resource.Get(nil)
@@ -169,38 +232,54 @@ func (instance *ApplyObject) watchRun(resource ObjectResource, generation int64,
 	if instance.matchesReferenceOfObjectToApplyAndGenerationAndIsReady(get, generation) {
 		return true, nil
 	}
-	start := time.Now()
-	for {
-		cTimeout := timeout - time.Now().Sub(start)
-		if cTimeout <= 0 {
-			return false, nil
-		}
-		select {
-		case event := <-w.ResultChan():
-			eventObjectInfo, _ := GetObjectInfo(event.Object, instance.objectValidator)
-			ld := l.WithDeepFieldOn("event", event, log.IsTraceEnabled)
-			ld.WithField("event", event).
-				Trace("Received event %v on %v.", event.Type, eventObjectInfo)
-
-			if !instance.matchesReferenceOfObjectToApplyAndGeneration(event.Object, generation) {
-				ld.Trace("Received event %v on %v which does not match %v and will be ignored.", event.Type, eventObjectInfo, instance.object)
-			} else if ready := IsReady(event.Object); ready == nil {
-				ld.Debug("Received event %v on %v does not support ready check and will be assumed as ready now.", event.Type, eventObjectInfo)
-				return true, nil
-			} else if *ready {
-				ld.Debug("Received event %v on %v which passes the ready check.", event.Type, eventObjectInfo)
-				return true, nil
-			} else {
-				ld.Debug("Received event %v on %v which does not pass the ready check. Continue wait...", event.Type, eventObjectInfo)
+	if timeout > 0 {
+		start := time.Now()
+		for {
+			cTimeout := timeout - time.Now().Sub(start)
+			if cTimeout <= 0 {
+				return false, nil
 			}
-		case <-time.After(cTimeout):
-			get, err := resource.Get(nil)
-			if err != nil {
-				return false, err
+			select {
+			case event := <-w.ResultChan():
+				if done, oErr := instance.onWatchEvent(event, l, generation); oErr != nil || done {
+					return done, oErr
+				}
+			case <-time.After(cTimeout):
+				get, err := resource.Get(nil)
+				if err != nil {
+					return false, err
+				}
+				return instance.matchesReferenceOfObjectToApplyAndGenerationAndIsReady(get, generation), nil
 			}
-			return instance.matchesReferenceOfObjectToApplyAndGenerationAndIsReady(get, generation), nil
 		}
 	}
+
+	for {
+		event := <-w.ResultChan()
+		if done, oErr := instance.onWatchEvent(event, l, generation); oErr != nil || done {
+			return done, oErr
+		}
+	}
+}
+
+func (instance *ApplyObject) onWatchEvent(event watch.Event, l log.Logger, generation int64) (done bool, err error) {
+	eventObjectInfo, _ := GetObjectInfo(event.Object, instance.objectValidator)
+	ld := l.WithDeepFieldOn("event", event, log.IsTraceEnabled)
+	ld.WithField("event", event).
+		Trace("Received event %v on %v.", event.Type, eventObjectInfo)
+
+	if !instance.matchesReferenceOfObjectToApplyAndGeneration(event.Object, generation) {
+		ld.Trace("Received event %v on %v which does not match %v and will be ignored.", event.Type, eventObjectInfo, instance.object)
+	} else if ready := IsReady(event.Object); ready == nil {
+		ld.Debug("Received event %v on %v does not support ready check and will be assumed as ready now.", event.Type, eventObjectInfo)
+		return true, nil
+	} else if *ready {
+		ld.Debug("Received event %v on %v which passes the ready check.", event.Type, eventObjectInfo)
+		return true, nil
+	} else {
+		ld.Debug("Received event %v on %v which does not pass the ready check. Continue wait...", event.Type, eventObjectInfo)
+	}
+	return false, nil
 }
 
 func (instance *ApplyObject) create(dry DryRunOn) (err error) {
@@ -409,18 +488,25 @@ func (instance ApplySet) Rollback() {
 	}
 }
 
-func (instance ApplySet) Wait(timeout time.Duration) (err error) {
+func (instance ApplySet) Wait(wu model.WaitUntil) (relevantDuration time.Duration, err error) {
 	defer func() {
 		if err != nil {
 			instance.Rollback()
 		}
 	}()
-	start := time.Now()
 	for _, child := range instance {
-		cTimeout := timeout - time.Now().Sub(start)
-		if err = child.Wait(cTimeout); err != nil {
-			err = fmt.Errorf("cannot wait for %v: %v", child, err)
-			return
+		cWu := wu
+		if to := cWu.Timeout; to != nil {
+			if relevantDuration > *to {
+				return 0, common.NewTimeoutError("timeout of %v reached - no more time to continue with left resources", *to)
+			}
+			cTimeout := *to - relevantDuration
+			cWu = wu.CopyWithTimeout(&cTimeout)
+		}
+		if cRelevantDuration, cErr := child.Wait(cWu); cErr != nil {
+			return 0, fmt.Errorf("cannot wait for %v: %v", child, err)
+		} else {
+			relevantDuration += cRelevantDuration
 		}
 	}
 	return
@@ -435,4 +521,70 @@ func (instance ApplySet) String() string {
 		result += child.String()
 	}
 	return "[" + result + "]"
+}
+
+type StagedApplySet map[model.Stage]ApplySet
+
+func (instance *StagedApplySet) Add(stage model.Stage, apply Apply) {
+	if instance == nil {
+		*instance = StagedApplySet{}
+	}
+	set := (*instance)[stage]
+	set.Add(apply)
+	(*instance)[stage] = set
+}
+
+func (instance StagedApplySet) Execute(wu model.WaitUntil) (relevantDuration time.Duration, err error) {
+	defer func() {
+		if err != nil {
+			instance.Rollback()
+		}
+	}()
+	for stage := range instance {
+		cWu := wu
+		if to := cWu.Timeout; to != nil {
+			if relevantDuration > *to {
+				return 0, common.NewTimeoutError("timeout of %v reached - no more time to continue with left resources", *to)
+			}
+			cTimeout := *to - relevantDuration
+			cWu = wu.CopyWithTimeout(&cTimeout)
+		}
+		if eRelevantDuration, eErr := instance.ExecuteStage(stage, cWu); eErr != nil {
+			return 0, eErr
+		} else {
+			relevantDuration += eRelevantDuration
+		}
+	}
+	return
+}
+
+func (instance StagedApplySet) DryRun(dry DryRunOn) error {
+	if dry == NowhereDryRun {
+		return nil
+	}
+	for _, child := range instance {
+		if err := child.Execute(dry); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (instance StagedApplySet) ExecuteStage(stage model.Stage, wu model.WaitUntil) (relevantDuration time.Duration, err error) {
+	set := instance[stage]
+	defer func() {
+		if err != nil {
+			set.Rollback()
+		}
+	}()
+	if eErr := set.Execute(NowhereDryRun); eErr != nil {
+		return 0, eErr
+	}
+	return set.Wait(wu)
+}
+
+func (instance StagedApplySet) Rollback() {
+	for _, action := range instance {
+		action.Rollback()
+	}
 }

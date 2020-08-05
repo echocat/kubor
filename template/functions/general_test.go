@@ -1,7 +1,7 @@
 package functions
 
 import (
-	"gotest.tools/assert"
+	"github.com/stretchr/testify/assert"
 	"testing"
 )
 
@@ -13,7 +13,7 @@ func Test_FuncMap(t *testing.T) {
 	                                        {{- $m.foo}},{{$m.bar}},{{$m.xyz}}`, "hello"), "666,123,hello")
 
 	_, err := executeTemplate(t, `{{map "foo"}}`, nil)
-	assert.ErrorContains(t, err, "expect always a key to value pair, this means the amount of parameters needs to be dividable by two, but got: 1")
+	assert.Error(t, err, "expect always a key to value pair, this means the amount of parameters needs to be dividable by two, but got: 1")
 }
 
 func Test_FuncSlice(t *testing.T) {

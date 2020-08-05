@@ -3,7 +3,7 @@ package functions
 import (
 	"encoding/base64"
 	"encoding/hex"
-	"github.com/pkg/errors"
+	"fmt"
 )
 
 var FuncDecodeBase64 = Function{
@@ -128,5 +128,5 @@ func base64EncodingFor(aType string, raw bool) (*base64.Encoding, error) {
 			return base64.URLEncoding, nil
 		}
 	}
-	return nil, errors.Errorf("unknown base64 type: %s", aType)
+	return nil, fmt.Errorf("unknown base64 type: %s", aType)
 }
