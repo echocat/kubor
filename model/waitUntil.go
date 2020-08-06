@@ -19,8 +19,10 @@ var (
 )
 
 type WaitUntil struct {
-	Stage   WaitUntilStage
-	Timeout *time.Duration
+	Stage                  WaitUntilStage
+	Timeout                *time.Duration
+	LogConsumer            *StreamTarget
+	LogSourceContainerName string
 }
 
 func (instance WaitUntil) CopyWithTimeout(timeout *time.Duration) WaitUntil {
@@ -36,7 +38,7 @@ func (instance WaitUntil) ShouldInherit() bool {
 
 func (instance *WaitUntil) Set(plain string) error {
 	if duration, err := time.ParseDuration(plain); err == nil {
-		*instance = WaitUntil{WaitUntilStageApplied, &duration}
+		*instance = WaitUntil{WaitUntilStageApplied, &duration, nil, ""}
 		return nil
 	}
 
@@ -47,14 +49,29 @@ func (instance *WaitUntil) Set(plain string) error {
 	}
 	result := WaitUntil{Stage: stage}
 
-	if len(parts) > 2 {
-		return fmt.Errorf("%w, expected no or one duration argument but got %d: %s", ErrIllegalWaitUntil, len(parts)-1, plain)
+	if len(parts) > 4 {
+		return fmt.Errorf("%w, expect not more than 4 arguments, but got %d: %s", ErrIllegalWaitUntil, len(parts)-1, plain)
 	}
-	if len(parts) == 2 {
-		if d, err := time.ParseDuration(parts[1]); err != nil {
-			return fmt.Errorf("%w, %v: %s", ErrIllegalWaitUntil, err, plain)
-		} else if d > 0 {
-			result.Timeout = &d
+	if len(parts) > 3 {
+		result.LogSourceContainerName = parts[3]
+	}
+	if len(parts) > 2 {
+		var logConsumer StreamTarget
+		if err := logConsumer.Set(parts[2]); err != nil {
+			return fmt.Errorf("%w: %v", ErrIllegalWaitUntil, err)
+		}
+		result.LogConsumer = &logConsumer
+	}
+	if len(parts) > 1 {
+		switch strings.ToLower(parts[1]) {
+		case "unlimited", "forever", "":
+			result.Timeout = nil
+		default:
+			if d, err := time.ParseDuration(parts[1]); err != nil {
+				return fmt.Errorf("%w, %v: %s", ErrIllegalWaitUntil, err, plain)
+			} else if d > 0 {
+				result.Timeout = &d
+			}
 		}
 	}
 	*instance = result
@@ -96,11 +113,10 @@ const (
 	WaitUntilStageDefault  = WaitUntilStage(0)
 	WaitUntilStageNever    = WaitUntilStage(1)
 	WaitUntilStageApplied  = WaitUntilStage(2)
-	WaitUntilStageDeployed = WaitUntilStage(3)
-	WaitUntilStageExecuted = WaitUntilStage(4)
+	WaitUntilStageExecuted = WaitUntilStage(3)
 )
 
-func (instance WaitUntilStage) Set(plain string) error {
+func (instance *WaitUntilStage) Set(plain string) error {
 	return instance.UnmarshalText([]byte(plain))
 }
 
@@ -117,8 +133,6 @@ func (instance WaitUntilStage) MarshalText() (text []byte, err error) {
 		return []byte("never"), nil
 	case WaitUntilStageApplied:
 		return []byte("applied"), nil
-	case WaitUntilStageDeployed:
-		return []byte("deployed"), nil
 	case WaitUntilStageExecuted:
 		return []byte("executed"), nil
 	default:
@@ -137,9 +151,6 @@ func (instance *WaitUntilStage) UnmarshalText(text []byte) error {
 		return nil
 	case "applied", "apply":
 		*instance = WaitUntilStageApplied
-		return nil
-	case "deployed", "deploy":
-		*instance = WaitUntilStageDeployed
 		return nil
 	case "executed", "execute":
 		*instance = WaitUntilStageExecuted

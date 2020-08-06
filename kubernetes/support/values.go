@@ -1,6 +1,8 @@
 package support
 
-import "strings"
+import (
+	"strings"
+)
 
 func NormalizeLabelValue(in string) string {
 	if in == "" {

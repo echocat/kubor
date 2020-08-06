@@ -108,6 +108,7 @@ var CategoriesDefault = Categories{
 	"conversations": CategoryConversations,
 	"general":       CategoryGeneral,
 	"kubernetes":    CategoryKubernetes,
+	"ids":           CategoryIds,
 	"math":          CategoryMath,
 	"path":          CategoryPath,
 	"regexp":        CategoryRegexp,

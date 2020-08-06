@@ -3,6 +3,7 @@ package kubernetes
 import (
 	"errors"
 	"fmt"
+	"github.com/echocat/kubor/model"
 	"github.com/googleapis/gnostic/OpenAPIv2"
 	"gopkg.in/yaml.v2"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -12,60 +13,21 @@ import (
 	"reflect"
 )
 
-const (
-	NowhereDryRun          DryRunOn = "nowhere"
-	ClientDryRun           DryRunOn = "client"
-	ServerDryRun           DryRunOn = "server"
-	ServerIfPossibleDryRun DryRunOn = "serverIfPossible"
-)
-
-type DryRunOn string
-
-func (instance DryRunOn) String() string {
-	return string(instance)
-}
-
-func (instance *DryRunOn) Set(plain string) error {
-	candidate := DryRunOn(plain)
-	switch candidate {
-	case NowhereDryRun, ClientDryRun, ServerDryRun, ServerIfPossibleDryRun:
-		*instance = candidate
-		return nil
-	default:
-		return fmt.Errorf("unknown dryRunOn: %v", candidate)
-	}
-}
-
-func (instance DryRunOn) IsEnabled() bool {
-	switch instance {
-	case ServerIfPossibleDryRun:
-		panic("This should not be called directly. Please resolve this before in your code to either server or client.")
-	case ClientDryRun, ServerDryRun:
-		return true
-	default:
-		return false
-	}
-}
-
-func (instance DryRunOn) Resolve(gvk schema.GroupVersionKind, client dynamic.Interface, runtime Runtime) (DryRunOn, error) {
-	if instance == ServerIfPossibleDryRun || instance == ServerDryRun {
+func ResolveDryRun(in model.DryRunOn, gvk schema.GroupVersionKind, client dynamic.Interface, runtime Runtime) (model.DryRunOn, error) {
+	if in == model.DryRunOnServerIfPossible || in == model.DryRunOnServer {
 		if serverSidePossible, err := HasServerDryRunSupport(gvk, client, runtime); err != nil {
-			return DryRunOn(""), err
-		} else if instance == ServerDryRun {
+			return "", err
+		} else if in == model.DryRunOnServer {
 			if !serverSidePossible {
-				return DryRunOn(""), fmt.Errorf("%v does not support server side dry run", gvk)
+				return "", fmt.Errorf("%v does not support server side dry run", gvk)
 			}
 		} else if serverSidePossible {
-			return ServerDryRun, nil
+			return model.DryRunOnServer, nil
 		} else {
-			return ClientDryRun, nil
+			return model.DryRunOnClient, nil
 		}
 	}
-	return instance, nil
-}
-
-func (instance *DryRunOn) Get() interface{} {
-	return instance
+	return in, nil
 }
 
 func HasServerDryRunSupport(gvk schema.GroupVersionKind, client dynamic.Interface, runtime Runtime) (bool, error) {

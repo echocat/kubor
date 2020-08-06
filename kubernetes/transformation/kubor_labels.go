@@ -14,16 +14,30 @@ func init() {
 }
 
 func ensureKuborLabels(project *model.Project, target *unstructured.Unstructured) error {
+	if err := ensureKuborLabelsOfPath(project, target, "metadata", "labels"); err != nil {
+		return err
+	}
+	if err := ensureKuborLabelsOfPath(project, target, "spec", "template", "metadata", "labels"); err != nil {
+		return err
+	}
+	return nil
+}
+
+func ensureKuborLabelsOfPath(project *model.Project, target *unstructured.Unstructured, fields ...string) error {
 	pl := project.Labels
-	labels := target.GetLabels()
+	labels, _, err := unstructured.NestedStringMap(target.Object, fields...)
+	if err != nil {
+		return err
+	}
+	if labels == nil {
+		labels = make(map[string]string)
+	}
 
 	ensureKuborLabel(&labels, pl.GroupId, project.GroupId)
 	ensureKuborLabel(&labels, pl.ArtifactId, project.ArtifactId)
 	ensureKuborLabel(&labels, pl.Release, project.Release)
 
-	target.SetLabels(labels)
-
-	return nil
+	return unstructured.SetNestedStringMap(target.Object, labels, fields...)
 }
 
 func ensureKuborLabel(labels *map[string]string, label model.Label, value string) {

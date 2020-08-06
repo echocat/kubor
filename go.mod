@@ -3,6 +3,7 @@ module github.com/echocat/kubor
 require (
 	github.com/alecthomas/kingpin v2.2.6+incompatible
 	github.com/aokoli/goutils v1.0.1
+	github.com/google/uuid v1.1.1
 	github.com/googleapis/gnostic v0.4.0
 	github.com/huandu/xstrings v1.2.0
 	github.com/imdario/mergo v0.3.8

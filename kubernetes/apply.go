@@ -1,6 +1,7 @@
 package kubernetes
 
 import (
+	"context"
 	"fmt"
 	"github.com/echocat/kubor/common"
 	"github.com/echocat/kubor/kubernetes/transformation"
@@ -17,9 +18,9 @@ import (
 )
 
 type Apply interface {
-	Execute(DryRunOn) error
-	Wait(wu model.WaitUntil) (relevantDuration time.Duration, err error)
-	Rollback()
+	Execute(scope string, dryRunOn model.DryRunOn) error
+	Wait(scope string, wu model.WaitUntil) (relevantDuration time.Duration, err error)
+	Rollback(scope string)
 	String() string
 }
 
@@ -70,19 +71,32 @@ func (instance ApplyObject) String() string {
 	return instance.object.String()
 }
 
-func (instance *ApplyObject) resolveDryRunOn(dry DryRunOn) (DryRunOn, error) {
-	return dry.Resolve(instance.object.Kind, instance.object.Client, instance.runtime)
+func (instance *ApplyObject) resolveDryRunOn(in model.DryRunOn) (model.DryRunOn, error) {
+	if in == model.DryRunNowhere {
+		return model.DryRunNowhere, nil
+	}
+	ofObject, err := instance.project.Annotations.GetDryRunOnFor(instance.object.Object, in)
+	if err != nil {
+		return "", err
+	}
+	return ResolveDryRun(ofObject, instance.object.Kind, instance.object.Client, instance.runtime)
 }
 
-func (instance *ApplyObject) Execute(dry DryRunOn) (err error) {
-	if dry, err = instance.resolveDryRunOn(dry); err != nil {
+func (instance *ApplyObject) Execute(scope string, dryRunOn model.DryRunOn) (err error) {
+	if dryRunOn, err = instance.resolveDryRunOn(dryRunOn); err != nil {
 		return err
 	}
 	applyOn, err := instance.project.Annotations.GetApplyOnFor(instance.object.Object)
 	if err != nil {
 		return err
 	}
+	stage, err := instance.project.Annotations.GetStageFor(instance.object.Object)
+	if err != nil {
+		return err
+	}
 	l := instance.log.
+		WithField("scope", scope).
+		WithField("stage", stage).
 		WithField("action", "checkExistence")
 	original, err := instance.object.Get(nil)
 	if errors.IsNotFound(err) {
@@ -102,7 +116,7 @@ func (instance *ApplyObject) Execute(dry DryRunOn) (err error) {
 			return err
 		}
 
-		return instance.create(dry)
+		return instance.create(scope, dryRunOn)
 	} else if err != nil {
 		return err
 	} else {
@@ -127,18 +141,23 @@ func (instance *ApplyObject) Execute(dry DryRunOn) (err error) {
 			return err
 		}
 
-		return instance.update(dry)
+		return instance.update(scope, dryRunOn)
 	}
 }
 
-func (instance *ApplyObject) Wait(global model.WaitUntil) (relevantDuration time.Duration, err error) {
+func (instance *ApplyObject) Wait(scope string, global model.WaitUntil) (relevantDuration time.Duration, err error) {
 	wu := global
 	wuf := wu.AsLazyFormatter("{{with .Timeout}}for {{.}} {{end}}")
 	skip := false
 	start := time.Now()
 	l := instance.log.
+		WithField("scope", scope).
 		WithField("action", "wait")
+
+	ctx, finished := context.WithCancel(context.Background())
+
 	defer func() {
+		finished()
 		ld := l.WithField("duration", time.Now().Sub(start))
 		if err != nil {
 			ldd := ld.
@@ -183,6 +202,16 @@ func (instance *ApplyObject) Wait(global model.WaitUntil) (relevantDuration time
 		return
 	}
 
+	if lc := owu.LogConsumer; lc != nil {
+		if provider := LogProviderFor(instance.runtime, instance.applied, owu.LogSourceContainerName); provider != nil {
+			go func() {
+				if err := PrintLogs(ctx, provider, lc.OpenForWrite); err != nil {
+					l.WithError(err).WithField("consumer", lc).Error("cannot consume logs")
+				}
+			}()
+		}
+	}
+
 	if instance.applied == nil {
 		return
 	}
@@ -196,20 +225,21 @@ func (instance *ApplyObject) Wait(global model.WaitUntil) (relevantDuration time
 		return 0, rErr
 	}
 	for {
-		var timeout time.Duration
+		cWu := wu
 		if to := wu.Timeout; to != nil {
-			timeout = *to - time.Now().Sub(start)
+			timeout := *to - time.Now().Sub(start)
 			if timeout <= 0 {
 				return 0, common.NewTimeoutError("%v was not ready after %v", resource, *to)
 			} else if instance.KeepAliveInterval > 0 && timeout > instance.KeepAliveInterval {
 				timeout = instance.KeepAliveInterval
 			}
+			cWu.Timeout = &timeout
 		}
-		if done, wErr := instance.watchRun(resource, *generation, timeout, l); wErr != nil || done {
+		if done, wErr := instance.watchRun(resource, *generation, cWu, l); wErr != nil || done {
 			if owu.Stage == model.WaitUntilStageDefault {
 				relevantDuration = time.Now().Sub(start)
 			}
-			return 0, wErr
+			return relevantDuration, wErr
 		}
 		duration := time.Now().Sub(start)
 		l.
@@ -219,7 +249,7 @@ func (instance *ApplyObject) Wait(global model.WaitUntil) (relevantDuration time
 	}
 }
 
-func (instance *ApplyObject) watchRun(resource ObjectResource, generation int64, timeout time.Duration, l log.Logger) (done bool, err error) {
+func (instance *ApplyObject) watchRun(resource ObjectResource, generation int64, wu model.WaitUntil, l log.Logger) (done bool, err error) {
 	w, wErr := resource.Watch(nil)
 	if wErr != nil {
 		return false, wErr
@@ -232,16 +262,16 @@ func (instance *ApplyObject) watchRun(resource ObjectResource, generation int64,
 	if instance.matchesReferenceOfObjectToApplyAndGenerationAndIsReady(get, generation) {
 		return true, nil
 	}
-	if timeout > 0 {
+	if timeout := wu.Timeout; timeout != nil && *timeout > 0 {
 		start := time.Now()
 		for {
-			cTimeout := timeout - time.Now().Sub(start)
+			cTimeout := *timeout - time.Now().Sub(start)
 			if cTimeout <= 0 {
 				return false, nil
 			}
 			select {
 			case event := <-w.ResultChan():
-				if done, oErr := instance.onWatchEvent(event, l, generation); oErr != nil || done {
+				if done, oErr := instance.onWatchEvent(event, l, generation, wu.Stage); oErr != nil || done {
 					return done, oErr
 				}
 			case <-time.After(cTimeout):
@@ -256,35 +286,66 @@ func (instance *ApplyObject) watchRun(resource ObjectResource, generation int64,
 
 	for {
 		event := <-w.ResultChan()
-		if done, oErr := instance.onWatchEvent(event, l, generation); oErr != nil || done {
+		if done, oErr := instance.onWatchEvent(event, l, generation, wu.Stage); oErr != nil || done {
 			return done, oErr
 		}
 	}
 }
 
-func (instance *ApplyObject) onWatchEvent(event watch.Event, l log.Logger, generation int64) (done bool, err error) {
-	eventObjectInfo, _ := GetObjectInfo(event.Object, instance.objectValidator)
-	ld := l.WithDeepFieldOn("event", event, log.IsTraceEnabled)
-	ld.WithField("event", event).
-		Trace("Received event %v on %v.", event.Type, eventObjectInfo)
+func (instance *ApplyObject) onWatchEvent(event watch.Event, l log.Logger, generation int64, wus model.WaitUntilStage) (done bool, err error) {
+	objectInfo, _ := GetObjectInfo(event.Object, instance.objectValidator)
+	l = l.WithDeepFieldOn("event", event, log.IsTraceEnabled)
+	l.Trace("Received event %v on %v.", event.Type, objectInfo)
 
 	if !instance.matchesReferenceOfObjectToApplyAndGeneration(event.Object, generation) {
-		ld.Trace("Received event %v on %v which does not match %v and will be ignored.", event.Type, eventObjectInfo, instance.object)
-	} else if ready := IsReady(event.Object); ready == nil {
-		ld.Debug("Received event %v on %v does not support ready check and will be assumed as ready now.", event.Type, eventObjectInfo)
+		l.Trace("Received event %v on %v which does not match %v and will be ignored.", event.Type, objectInfo, instance.object)
+		return false, nil
+	}
+
+	switch wus {
+	case model.WaitUntilStageApplied:
+		return instance.onWatchEventForApplied(event, objectInfo, l)
+	case model.WaitUntilStageExecuted:
+		return instance.onWatchEventForExecuted(event, objectInfo, l)
+	default:
+		return true, fmt.Errorf("at this position waitUntil.stage of '%v' is not expected", wus)
+	}
+}
+
+func (instance *ApplyObject) onWatchEventForApplied(event watch.Event, objectInfo ObjectInfo, l log.Logger) (done bool, err error) {
+	if ready := IsReady(event.Object); ready == nil {
+		l.Debug("Received event %v on %v does not support ready check and will be assumed as ready now.", event.Type, objectInfo)
 		return true, nil
 	} else if *ready {
-		ld.Debug("Received event %v on %v which passes the ready check.", event.Type, eventObjectInfo)
+		l.Debug("Received event %v on %v which passes the ready check.", event.Type, objectInfo)
 		return true, nil
-	} else {
-		ld.Debug("Received event %v on %v which does not pass the ready check. Continue wait...", event.Type, eventObjectInfo)
 	}
+	l.Debug("Received event %v on %v which does not pass the ready check. Continue wait...", event.Type, objectInfo)
 	return false, nil
 }
 
-func (instance *ApplyObject) create(dry DryRunOn) (err error) {
+func (instance *ApplyObject) onWatchEventForExecuted(event watch.Event, objectInfo ObjectInfo, l log.Logger) (done bool, err error) {
+	unknownFail := func() (done bool, err error) {
+		return true, fmt.Errorf("don't know how to watch for executed stage of object")
+	}
+	if state := StateOf(event.Object); state == nil {
+		return unknownFail()
+	} else if state.IsActive() {
+		l.Debug("Received event %v on %v which does indicate that the object is still active. Continue wait...", event.Type, objectInfo)
+		return false, nil
+	} else if *state == StateSucceeded {
+		l.Debug("Received event %v on %v which passes the ready check.", event.Type, objectInfo)
+		return true, nil
+	} else if *state == StateFailed {
+		return true, fmt.Errorf("execution failed")
+	}
+	return unknownFail()
+}
+
+func (instance *ApplyObject) create(scope string, dry model.DryRunOn) (err error) {
 	start := time.Now()
 	l := instance.log.
+		WithField("scope", scope).
 		WithField("action", "create").
 		WithField("dryRunOn", dry)
 	defer func() {
@@ -312,10 +373,10 @@ func (instance *ApplyObject) create(dry DryRunOn) (err error) {
 	}()
 	l.Debug("Create %v...", instance.object)
 	opts := metav1.CreateOptions{}
-	if dry == ServerDryRun {
+	if dry == model.DryRunOnServer {
 		opts.DryRun = []string{metav1.DryRunAll}
 	}
-	if dry != ClientDryRun {
+	if dry != model.DryRunOnClient {
 		if instance.applied, err = instance.object.Create(&opts); err != nil {
 			instance.applied = nil
 			return
@@ -324,9 +385,10 @@ func (instance *ApplyObject) create(dry DryRunOn) (err error) {
 	return
 }
 
-func (instance *ApplyObject) update(dry DryRunOn) (err error) {
+func (instance *ApplyObject) update(scope string, dry model.DryRunOn) (err error) {
 	start := time.Now()
 	l := instance.log.
+		WithField("scope", scope).
 		WithField("action", "update").
 		WithField("dryRunOn", dry)
 	defer func() {
@@ -354,10 +416,10 @@ func (instance *ApplyObject) update(dry DryRunOn) (err error) {
 	}()
 	l.Debug("Update %v...", instance.object)
 	opts := metav1.UpdateOptions{}
-	if dry == ServerDryRun {
+	if dry == model.DryRunOnServer {
 		opts.DryRun = []string{"All"}
 	}
-	if dry != ClientDryRun {
+	if dry != model.DryRunOnClient {
 		if instance.applied, err = instance.object.Update(&opts); err != nil {
 			instance.applied = nil
 			return
@@ -420,13 +482,13 @@ func (instance *ApplyObject) getGenerationOf(runtimeObject runtime.Object) *int6
 	}
 }
 
-func (instance *ApplyObject) Rollback() {
+func (instance *ApplyObject) Rollback(scope string) {
 	if instance.applied == nil {
 		return
 	}
 	var err error
 	start := time.Now()
-	l := instance.log.WithField("action", "rollback")
+	l := instance.log.WithField("action", "rollback").WithField("scope", scope)
 	defer func() {
 		instance.applied = nil
 		ld := l.
@@ -467,14 +529,14 @@ func (instance *ApplySet) Add(apply Apply) {
 	*instance = append(*instance, apply)
 }
 
-func (instance ApplySet) Execute(dry DryRunOn) (err error) {
+func (instance ApplySet) Execute(scope string, dryRunOn model.DryRunOn) (err error) {
 	defer func() {
-		if err != nil && dry == NowhereDryRun {
-			instance.Rollback()
+		if err != nil && dryRunOn == model.DryRunNowhere {
+			instance.Rollback(scope)
 		}
 	}()
 	for _, child := range instance {
-		if err = child.Execute(dry); err != nil {
+		if err = child.Execute(scope, dryRunOn); err != nil {
 			err = fmt.Errorf("cannot apply %v: %v", child, err)
 			return
 		}
@@ -482,16 +544,16 @@ func (instance ApplySet) Execute(dry DryRunOn) (err error) {
 	return
 }
 
-func (instance ApplySet) Rollback() {
+func (instance ApplySet) Rollback(scope string) {
 	for _, action := range instance {
-		action.Rollback()
+		action.Rollback(scope)
 	}
 }
 
-func (instance ApplySet) Wait(wu model.WaitUntil) (relevantDuration time.Duration, err error) {
+func (instance ApplySet) Wait(scope string, wu model.WaitUntil) (relevantDuration time.Duration, err error) {
 	defer func() {
 		if err != nil {
-			instance.Rollback()
+			instance.Rollback(scope)
 		}
 	}()
 	for _, child := range instance {
@@ -503,8 +565,8 @@ func (instance ApplySet) Wait(wu model.WaitUntil) (relevantDuration time.Duratio
 			cTimeout := *to - relevantDuration
 			cWu = wu.CopyWithTimeout(&cTimeout)
 		}
-		if cRelevantDuration, cErr := child.Wait(cWu); cErr != nil {
-			return 0, fmt.Errorf("cannot wait for %v: %v", child, err)
+		if cRelevantDuration, cErr := child.Wait(scope, cWu); cErr != nil {
+			return 0, fmt.Errorf("cannot wait for %v: %v", child, cErr)
 		} else {
 			relevantDuration += cRelevantDuration
 		}
@@ -526,7 +588,7 @@ func (instance ApplySet) String() string {
 type StagedApplySet map[model.Stage]ApplySet
 
 func (instance *StagedApplySet) Add(stage model.Stage, apply Apply) {
-	if instance == nil {
+	if instance == nil || *instance == nil {
 		*instance = StagedApplySet{}
 	}
 	set := (*instance)[stage]
@@ -534,22 +596,25 @@ func (instance *StagedApplySet) Add(stage model.Stage, apply Apply) {
 	(*instance)[stage] = set
 }
 
-func (instance StagedApplySet) Execute(wu model.WaitUntil) (relevantDuration time.Duration, err error) {
+func (instance StagedApplySet) Execute(scope string, dry model.DryRunOn, wu *model.WaitUntil, rollbackIfNeeded bool) (relevantDuration time.Duration, err error) {
 	defer func() {
-		if err != nil {
-			instance.Rollback()
+		if err != nil && rollbackIfNeeded {
+			for _, action := range instance {
+				action.Rollback(scope)
+			}
 		}
 	}()
 	for stage := range instance {
 		cWu := wu
-		if to := cWu.Timeout; to != nil {
-			if relevantDuration > *to {
-				return 0, common.NewTimeoutError("timeout of %v reached - no more time to continue with left resources", *to)
+		if cWu != nil && cWu.Timeout != nil {
+			if relevantDuration > *cWu.Timeout {
+				return 0, common.NewTimeoutError("timeout of %v reached - no more time to continue with left resources", *cWu.Timeout)
 			}
-			cTimeout := *to - relevantDuration
-			cWu = wu.CopyWithTimeout(&cTimeout)
+			cTimeout := *cWu.Timeout - relevantDuration
+			tcWu := wu.CopyWithTimeout(&cTimeout)
+			cWu = &tcWu
 		}
-		if eRelevantDuration, eErr := instance.ExecuteStage(stage, cWu); eErr != nil {
+		if eRelevantDuration, eErr := instance.ExecuteStage(scope, stage, dry, cWu); eErr != nil {
 			return 0, eErr
 		} else {
 			relevantDuration += eRelevantDuration
@@ -558,33 +623,27 @@ func (instance StagedApplySet) Execute(wu model.WaitUntil) (relevantDuration tim
 	return
 }
 
-func (instance StagedApplySet) DryRun(dry DryRunOn) error {
-	if dry == NowhereDryRun {
-		return nil
-	}
-	for _, child := range instance {
-		if err := child.Execute(dry); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func (instance StagedApplySet) ExecuteStage(stage model.Stage, wu model.WaitUntil) (relevantDuration time.Duration, err error) {
+func (instance StagedApplySet) ExecuteStage(scope string, stage model.Stage, dryRunOn model.DryRunOn, wu *model.WaitUntil) (relevantDuration time.Duration, err error) {
 	set := instance[stage]
+	start := time.Now()
+	l := log.WithField("stage", stage).
+		WithField("scope", scope)
+
+	l.Info("Entering %s/%v...", scope, stage)
 	defer func() {
+		l = l.WithField("duration", time.Now().Sub(start))
 		if err != nil {
-			set.Rollback()
+			set.Rollback(scope)
+			l.WithError(err).Error("Entering %s/%v... FAILED!", scope, stage)
+		} else {
+			l.Debug("Entering %s/%v... SUCCESS!", scope, stage)
 		}
 	}()
-	if eErr := set.Execute(NowhereDryRun); eErr != nil {
+	if eErr := set.Execute(scope, dryRunOn); eErr != nil {
 		return 0, eErr
 	}
-	return set.Wait(wu)
-}
-
-func (instance StagedApplySet) Rollback() {
-	for _, action := range instance {
-		action.Rollback()
+	if wu != nil {
+		relevantDuration, err = set.Wait(scope, *wu)
 	}
+	return
 }

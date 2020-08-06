@@ -15,7 +15,7 @@ var (
 )
 
 const (
-	StageDefault = Stage("default")
+	StageDefault = Stage("deploy")
 )
 
 type Stage string
@@ -49,6 +49,18 @@ func (instance *Stage) UnmarshalText(text []byte) error {
 
 type Stages []Stage
 
+func (instance Stages) Contains(what Stage) bool {
+	if len(instance) == 0 && what == StageDefault {
+		return true
+	}
+	for _, candidate := range instance {
+		if candidate == what {
+			return true
+		}
+	}
+	return false
+}
+
 func (instance *Stages) Set(plain string) error {
 	result := Stages{}
 	for _, plainPart := range strings.Split(plain, ",") {
@@ -72,7 +84,11 @@ func (instance Stages) Strings() []string {
 }
 
 func (instance Stages) String() string {
-	return strings.Join(instance.Strings(), ",")
+	result := strings.Join(instance.Strings(), ",")
+	if result == "" {
+		return StageDefault.String()
+	}
+	return result
 }
 
 type StageRange struct {
@@ -107,7 +123,7 @@ func (instance StageRange) Matches(stages Stages, stage Stage) bool {
 	return false
 }
 
-func (instance StageRange) Set(plain string) error {
+func (instance *StageRange) Set(plain string) error {
 	return instance.UnmarshalText([]byte(plain))
 }
 
@@ -141,8 +157,8 @@ func (instance *StageRange) UnmarshalText(text []byte) error {
 		return nil
 	}
 	parts := strings.Split(string(text), ":")
-	if len(parts) != 2 {
-		return fmt.Errorf("%w: expected exact 2 parts separated by a ':', but got: %d", ErrIllegalStageRange, len(parts))
+	if len(parts) > 2 {
+		return fmt.Errorf("%w: expected 1 or 2 parts separated by a ':', but got: %d", ErrIllegalStageRange, len(parts))
 	}
 	result := StageRange{}
 
@@ -154,7 +170,9 @@ func (instance *StageRange) UnmarshalText(text []byte) error {
 		result.From = &v
 	}
 
-	if parts[1] != "" {
+	if len(parts) == 1 {
+		result.To = result.From
+	} else if parts[1] != "" {
 		var v Stage
 		if err := v.UnmarshalText([]byte(parts[1])); err != nil {
 			return fmt.Errorf("%w: %v", ErrIllegalStageRange, err)

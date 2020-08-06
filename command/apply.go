@@ -38,9 +38,10 @@ func (instance DryRunType) String() string {
 func init() {
 	timeout := time.Minute * 5
 	cmd := &Apply{
-		Wait:     model.WaitUntil{Stage: model.WaitUntilStageApplied, Timeout: &timeout},
-		DryRun:   DryRunType("before"),
-		DryRunOn: kubernetes.ServerIfPossibleDryRun,
+		Wait:      model.WaitUntil{Stage: model.WaitUntilStageApplied, Timeout: &timeout},
+		KeepAlive: 1 * time.Minute,
+		DryRun:    DryRunType("before"),
+		DryRunOn:  model.DryRunOnServerIfPossible,
 	}
 	cmd.Parent = cmd
 	RegisterInitializable(cmd)
@@ -54,7 +55,7 @@ type Apply struct {
 	KeepAlive  time.Duration
 	Predicate  common.EvaluatingPredicate
 	DryRun     DryRunType
-	DryRunOn   kubernetes.DryRunOn
+	DryRunOn   model.DryRunOn
 	StageRange model.StageRange
 }
 
@@ -70,12 +71,12 @@ func (instance *Apply) ConfigureCliCommands(context string, hc common.HasCommand
 		" running environment which was deployed. If it fails it will try to rollback.").
 		Short('w').
 		Envar("KUBOR_WAIT").
-		Default("applied:" + (time.Minute * 5).String()).
+		Default(instance.Wait.String()).
 		SetValue(&instance.Wait)
 	cmd.Flag("keepAlive", "If set to value larger than 0 it will do keep alive actions while wait for "+
 		" completions.").
 		Envar("KUBOR_KEEP_ALIVE").
-		Default((time.Minute * 1).String()).
+		Default(instance.KeepAlive.String()).
 		DurationVar(&instance.KeepAlive)
 	cmd.Flag("predicate", "Filters every object that should be listed. Empty allows everything."+
 		" Example: \"{{.spec.name}}=Foo.*\"").
@@ -139,8 +140,7 @@ func (instance *Apply) RunWithArguments(arguments Arguments) error {
 	}
 
 	if instance.DryRun == DryRunBefore || instance.DryRun == DryRunOnly {
-		err = task.stagedApplySet.DryRun(instance.DryRunOn)
-		if err != nil {
+		if _, err := task.stagedApplySet.Execute("dryRun", instance.DryRunOn, nil, false); err != nil {
 			return err
 		}
 		if instance.DryRun == DryRunOnly {
@@ -148,7 +148,7 @@ func (instance *Apply) RunWithArguments(arguments Arguments) error {
 		}
 	}
 
-	_, err = task.stagedApplySet.Execute(instance.Wait)
+	_, err = task.stagedApplySet.Execute("apply", model.DryRunNowhere, &instance.Wait, true)
 	return err
 }
 
@@ -182,6 +182,14 @@ func (instance *applyTask) onObject(source string, _ runtime.Object, object *uns
 	stage, err := instance.arguments.Project.Annotations.GetStageFor(object)
 	if err != nil {
 		return err
+	}
+
+	if !instance.arguments.Project.Stages.Contains(stage) {
+		objectResource, err := kubernetes.GetObjectResource(object, instance.dynamicClient, instance.arguments.Project.Validation.Schema)
+		if err != nil {
+			return err
+		}
+		return fmt.Errorf("%v (source: %s) has defined unknown stage: %v; project defines: %v", objectResource, source, stage, instance.arguments.Project.Stages)
 	}
 
 	if instance.source.StageRange.Matches(instance.arguments.Project.Stages, stage) {
