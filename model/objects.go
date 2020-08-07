@@ -68,7 +68,7 @@ func (instance *ObjectHandler) handleContent(source string, content []byte) erro
 			if object, _, err := instance.Deserializer.Decode([]byte(part), nil, nil); runtime.IsNotRegisteredError(err) {
 				if unstr, nErr := instance.decodeUnstructured([]byte(part)); nErr != nil {
 					return fmt.Errorf("%s: %v", fSource, err)
-				} else if !instance.Project.Validation.Schema.IsIgnored(unstr.GroupVersionKind()) {
+				} else if !instance.Project.Scheme.IsIgnored(GroupVersionKind(unstr.GroupVersionKind())) {
 					return fmt.Errorf("%s: %v", fSource, err)
 				} else if err := instance.OnObject(fSource, unstr, unstr); err != nil {
 					return fmt.Errorf("%s: %v", fSource, err)

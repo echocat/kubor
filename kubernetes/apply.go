@@ -30,9 +30,8 @@ func NewApplyObject(
 	object *unstructured.Unstructured,
 	client dynamic.Interface,
 	runtime Runtime,
-	objectValidator ObjectValidator,
 ) (*ApplyObject, error) {
-	objectResource, err := GetObjectResource(object, client, objectValidator)
+	objectResource, err := GetObjectResource(object, client, project.Scheme)
 	if err != nil {
 		return nil, err
 	}
@@ -48,9 +47,8 @@ func NewApplyObject(
 			WithField("source", source).
 			WithField("object", objectResource).
 			WithField("stage", stage),
-		object:          objectResource,
-		runtime:         runtime,
-		objectValidator: objectValidator,
+		object:  objectResource,
+		runtime: runtime,
 	}, nil
 }
 
@@ -62,9 +60,8 @@ type ApplyObject struct {
 	object   ObjectResource
 	original *ObjectResource
 
-	applied         *unstructured.Unstructured
-	objectValidator ObjectValidator
-	runtime         Runtime
+	applied *unstructured.Unstructured
+	runtime Runtime
 }
 
 func (instance ApplyObject) String() string {
@@ -79,7 +76,7 @@ func (instance *ApplyObject) resolveDryRunOn(in model.DryRunOn) (model.DryRunOn,
 	if err != nil {
 		return "", err
 	}
-	return ResolveDryRun(ofObject, instance.object.Kind, instance.object.Client, instance.runtime)
+	return ResolveDryRun(ofObject, instance.object.GroupVersionKind, instance.object.Client, instance.runtime)
 }
 
 func (instance *ApplyObject) Execute(scope string, dryRunOn model.DryRunOn) (err error) {
@@ -112,10 +109,6 @@ func (instance *ApplyObject) Execute(scope string, dryRunOn model.DryRunOn) (err
 			Debug("%v does not exist - it will be created.", instance.object)
 		instance.original = nil
 
-		if err := transformation.TransformForCreate(instance.project, instance.object.Object); err != nil {
-			return err
-		}
-
 		return instance.create(scope, dryRunOn)
 	} else if err != nil {
 		return err
@@ -127,7 +120,7 @@ func (instance *ApplyObject) Execute(scope string, dryRunOn model.DryRunOn) (err
 			return nil
 		}
 
-		originalResource, err := GetObjectResource(original, instance.object.Client, instance.objectValidator)
+		originalResource, err := GetObjectResource(original, instance.object.Client, instance.project.Scheme)
 		if err != nil {
 			return err
 		}
@@ -141,7 +134,7 @@ func (instance *ApplyObject) Execute(scope string, dryRunOn model.DryRunOn) (err
 			return err
 		}
 
-		return instance.update(scope, dryRunOn)
+		return instance.update(scope, *original, dryRunOn)
 	}
 }
 
@@ -157,6 +150,15 @@ func (instance *ApplyObject) Wait(scope string, global model.WaitUntil) (relevan
 	ctx, finished := context.WithCancel(context.Background())
 
 	defer func() {
+		if dErr := instance.deleteIfNeeded(scope, wu); dErr != nil {
+			if err != nil {
+				err = fmt.Errorf("%w - and - %v", err, dErr)
+			} else {
+				err = dErr
+			}
+		}
+	}()
+	defer func() {
 		finished()
 		ld := l.WithField("duration", time.Now().Sub(start))
 		if err != nil {
@@ -166,7 +168,7 @@ func (instance *ApplyObject) Wait(scope string, global model.WaitUntil) (relevan
 			if ldd.IsDebugEnabled() {
 				ldd.Error("Wait %vuntil %v is ready... FAILED!", wuf, instance.object)
 			} else {
-				ldd.Error("%v was not ready after %v.", instance.object, wuf)
+				ldd.Error("%v is not ready.", instance.object)
 			}
 		} else if skip {
 			ldd := ld.WithField("status", "skipped")
@@ -220,7 +222,7 @@ func (instance *ApplyObject) Wait(scope string, global model.WaitUntil) (relevan
 		return 0, fmt.Errorf("cannot retrieve generation of object to be applied")
 	}
 
-	resource, rErr := GetObjectResource(instance.applied, instance.object.Client, instance.objectValidator)
+	resource, rErr := GetObjectResource(instance.applied, instance.object.Client, instance.project.Scheme)
 	if rErr != nil {
 		return 0, rErr
 	}
@@ -293,7 +295,7 @@ func (instance *ApplyObject) watchRun(resource ObjectResource, generation int64,
 }
 
 func (instance *ApplyObject) onWatchEvent(event watch.Event, l log.Logger, generation int64, wus model.WaitUntilStage) (done bool, err error) {
-	objectInfo, _ := GetObjectInfo(event.Object, instance.objectValidator)
+	objectInfo, _ := GetObjectInfo(event.Object, instance.project.Scheme)
 	l = l.WithDeepFieldOn("event", event, log.IsTraceEnabled)
 	l.Trace("Received event %v on %v.", event.Type, objectInfo)
 
@@ -371,13 +373,21 @@ func (instance *ApplyObject) create(scope string, dry model.DryRunOn) (err error
 			}
 		}
 	}()
+
 	l.Debug("Create %v...", instance.object)
+
+	target, cErr := instance.object.CloneForCreate(instance.project)
+	if cErr != nil {
+		return cErr
+	}
+
 	opts := metav1.CreateOptions{}
 	if dry == model.DryRunOnServer {
 		opts.DryRun = []string{metav1.DryRunAll}
 	}
+
 	if dry != model.DryRunOnClient {
-		if instance.applied, err = instance.object.Create(&opts); err != nil {
+		if instance.applied, err = target.Create(&opts); err != nil {
 			instance.applied = nil
 			return
 		}
@@ -385,7 +395,7 @@ func (instance *ApplyObject) create(scope string, dry model.DryRunOn) (err error
 	return
 }
 
-func (instance *ApplyObject) update(scope string, dry model.DryRunOn) (err error) {
+func (instance *ApplyObject) update(scope string, original unstructured.Unstructured, dry model.DryRunOn) (err error) {
 	start := time.Now()
 	l := instance.log.
 		WithField("scope", scope).
@@ -415,12 +425,18 @@ func (instance *ApplyObject) update(scope string, dry model.DryRunOn) (err error
 		}
 	}()
 	l.Debug("Update %v...", instance.object)
+
+	target, cErr := instance.object.CloneForUpdate(instance.project, original)
+	if cErr != nil {
+		return cErr
+	}
+
 	opts := metav1.UpdateOptions{}
 	if dry == model.DryRunOnServer {
 		opts.DryRun = []string{"All"}
 	}
 	if dry != model.DryRunOnClient {
-		if instance.applied, err = instance.object.Update(&opts); err != nil {
+		if instance.applied, err = target.Update(&opts); err != nil {
 			instance.applied = nil
 			return
 		}
@@ -480,6 +496,62 @@ func (instance *ApplyObject) getGenerationOf(runtimeObject runtime.Object) *int6
 		generation := metaObject.GetGeneration()
 		return &generation
 	}
+}
+
+func (instance *ApplyObject) Delete(scope string) (err error) {
+	start := time.Now()
+	l := instance.log.
+		WithField("scope", scope).
+		WithField("action", "delete")
+
+	defer func() {
+		ld := l.WithField("duration", time.Now().Sub(start))
+		if err != nil {
+			ldd := ld.
+				WithError(err).
+				WithField("status", "failed")
+			if ldd.IsDebugEnabled() {
+				ldd.Error("Deleting %v... FAILED!", instance.object)
+			} else {
+				ldd.Error("Was not able to delete %v.", instance.object)
+			}
+		} else {
+			ldd := ld.WithField("status", "success")
+			if ldd.IsDebugEnabled() {
+				ldd.Info("Deleting %v... DONE!", instance.object)
+			} else {
+				ldd.Info("%v deleted.", instance.object)
+			}
+		}
+	}()
+
+	l.Debug("Deleting %v...", instance.object)
+
+	dp := metav1.DeletePropagationForeground
+	if err := instance.object.Delete(&metav1.DeleteOptions{
+		PropagationPolicy: &dp,
+	}); err != nil {
+		return fmt.Errorf("cannot delete resource: %w", err)
+	}
+
+	return nil
+}
+
+func (instance *ApplyObject) deleteIfNeeded(scope string, cu model.WaitUntil) error {
+	if cu.Stage != model.WaitUntilStageExecuted {
+		return nil
+	}
+
+	cleanupOn, err := instance.project.Annotations.GetCleanupOn(instance.object.Object)
+	if err != nil {
+		return fmt.Errorf("cannot delete resource: %w", err)
+	}
+
+	if !cleanupOn.OnExecuted() {
+		return nil
+	}
+
+	return instance.Delete(scope)
 }
 
 func (instance *ApplyObject) Rollback(scope string) {

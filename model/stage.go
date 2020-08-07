@@ -96,6 +96,10 @@ type StageRange struct {
 	To   *Stage
 }
 
+func (instance StageRange) IsRelevant() bool {
+	return instance.From != nil || instance.To != nil
+}
+
 func (instance StageRange) Matches(stages Stages, stage Stage) bool {
 	if len(stages) == 0 && stage == StageDefault {
 		// Default behavior if no stages are defined and the stage is the default one.

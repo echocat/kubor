@@ -15,6 +15,10 @@ type EvaluatingPredicate struct {
 	Excludes EvaluatingPartPredicate
 }
 
+func (instance EvaluatingPredicate) IsRelevant() bool {
+	return instance.Includes.IsRelevant() || instance.Excludes.IsRelevant()
+}
+
 func (instance EvaluatingPredicate) Matches(data interface{}) (bool, error) {
 	if len(instance.Includes) > 0 {
 		if match, err := instance.Includes.Matches(data); err != nil {
@@ -161,6 +165,10 @@ type EvaluatingPartMatcher struct {
 	check               *regexp.Regexp
 }
 
+func (instance EvaluatingPartMatcher) IsRelevant() bool {
+	return true
+}
+
 func (instance EvaluatingPartMatcher) Value(data interface{}) (string, error) {
 	return instance.valueTemplate.ExecuteToString(data)
 }
@@ -178,6 +186,15 @@ func (instance EvaluatingPartMatcher) String() string {
 }
 
 type EvaluatingPartPredicate []EvaluatingPartMatcher
+
+func (instance EvaluatingPartPredicate) IsRelevant() bool {
+	for _, candidate := range instance {
+		if candidate.IsRelevant() {
+			return true
+		}
+	}
+	return false
+}
 
 func (instance EvaluatingPartPredicate) Matches(data interface{}) (bool, error) {
 	for _, matcher := range instance {

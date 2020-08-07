@@ -8,20 +8,20 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"strings"
 )
 
 type Project struct {
 	// Values set using Load() method.
-	GroupId           string              `yaml:"groupId,omitempty" json:"groupId,omitempty"`
-	ArtifactId        string              `yaml:"artifactId" json:"artifactId"`
+	GroupId           Name                `yaml:"groupId,omitempty" json:"groupId,omitempty"`
+	ArtifactId        Name                `yaml:"artifactId" json:"artifactId"`
 	Release           string              `yaml:"release,omitempty" json:"release,omitempty"`
+	Claim             Claim               `yaml:"claim,omitempty" json:"claim,omitempty"`
 	Stages            Stages              `yaml:"stages,omitempty" json:"stages,omitempty"`
 	Templating        Templating          `yaml:"templating,omitempty" json:"templating,omitempty"`
 	ConditionalValues []ConditionalValues `yaml:"values,omitempty" json:"values,omitempty"`
 	Labels            Labels              `yaml:"labels,omitempty" json:"labels,omitempty"`
 	Annotations       Annotations         `yaml:"annotations,omitempty" json:"annotations,omitempty"`
-	Validation        Validation          `yaml:"validation,omitempty" json:"validation,omitempty"`
+	Scheme            Scheme              `yaml:"scheme,omitempty" json:"scheme,omitempty"`
 
 	// Values set using implicitly.
 	Source  string            `yaml:"-" json:"-"`
@@ -33,6 +33,7 @@ type Project struct {
 
 func newProject() *Project {
 	return &Project{
+		Claim:             newClaim(),
 		Templating:        newTemplating(),
 		ConditionalValues: []ConditionalValues{},
 		Values:            Values{},
@@ -42,7 +43,7 @@ func newProject() *Project {
 }
 
 func (instance Project) Validate() error {
-	if strings.TrimSpace(instance.ArtifactId) == "" {
+	if instance.ArtifactId == "" {
 		return fmt.Errorf("artifactId should not be empty")
 	}
 	return nil
@@ -77,8 +78,8 @@ type ProjectFactory struct {
 	source         string
 	sourceRequired bool
 	values         Values
-	artifactId     string
-	groupId        string
+	artifactId     Name
+	groupId        Name
 	release        string
 }
 
@@ -113,10 +114,13 @@ func (instance *ProjectFactory) Create(context string) (*Project, error) {
 		if result, err = instance.populateStage2(result); err != nil {
 			return nil, err
 		}
+		if result, err = instance.populateStage3(result); err != nil {
+			return nil, err
+		}
 	}
 
 	if log.IsDebugEnabled() {
-		name := result.ArtifactId
+		name := result.ArtifactId.String()
 		l := log.
 			WithField("source", result.Source).
 			WithField("artifactId", result.ArtifactId)
@@ -208,6 +212,16 @@ func (instance *ProjectFactory) populateStage2(input *Project) (*Project, error)
 	return &result, nil
 }
 
+func (instance *ProjectFactory) populateStage3(input *Project) (*Project, error) {
+	result := *input
+	c, err := input.Claim.evaluate(input)
+	if err != nil {
+		return nil, err
+	}
+	result.Claim = c
+	return &result, nil
+}
+
 func (instance *ProjectFactory) ConfigureFlags(hf common.HasFlags) {
 	hf.Flag("source", "Specifies the location of the kubor source file.").
 		Default(".kubor.yml").
@@ -217,11 +231,11 @@ func (instance *ProjectFactory) ConfigureFlags(hf common.HasFlags) {
 	hf.Flag("groupId", "If set it will overrides groupId from source file.").
 		Envar("KUBOR_GROUP_ID").
 		PlaceHolder("<groupId>").
-		StringVar(&instance.groupId)
+		SetValue(&instance.groupId)
 	hf.Flag("artifactId", "If set it will overrides artifactId from source file.").
 		Envar("KUBOR_ARTIFACT_ID").
 		PlaceHolder("<artifactId>").
-		StringVar(&instance.artifactId)
+		SetValue(&instance.artifactId)
 	hf.Flag("release", "If set it will overrides release from source file.").
 		Envar("KUBOR_RELEASE").
 		PlaceHolder("<release>").

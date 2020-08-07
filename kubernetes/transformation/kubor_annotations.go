@@ -9,7 +9,7 @@ func init() {
 	RegisterUpdateTransformationFunc(func(project *model.Project, _ unstructured.Unstructured, target *unstructured.Unstructured) error {
 		return ensureKuborAnnotations(project, target)
 	})
-	RegisterCreateTransformationFunc(ensureKuborLabels)
+	RegisterCreateTransformationFunc(ensureKuborAnnotations)
 }
 
 func ensureKuborAnnotations(project *model.Project, target *unstructured.Unstructured) error {
@@ -36,6 +36,7 @@ func ensureKuborAnnotationsOfPath(project *model.Project, target *unstructured.U
 	ensureKuborAnnotation(&annotations, pa.ApplyOn)
 	ensureKuborAnnotation(&annotations, pa.DryRunOn)
 	ensureKuborAnnotation(&annotations, pa.WaitUntil)
+	ensureKuborAnnotation(&annotations, pa.CleanupOn)
 
 	return unstructured.SetNestedStringMap(target.Object, annotations, fields...)
 }

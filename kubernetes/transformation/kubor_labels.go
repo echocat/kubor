@@ -33,9 +33,9 @@ func ensureKuborLabelsOfPath(project *model.Project, target *unstructured.Unstru
 		labels = make(map[string]string)
 	}
 
-	ensureKuborLabel(&labels, pl.GroupId, project.GroupId)
-	ensureKuborLabel(&labels, pl.ArtifactId, project.ArtifactId)
-	ensureKuborLabel(&labels, pl.Release, project.Release)
+	ensureKuborLabel(&labels, pl.GroupId, project.GroupId.String())
+	ensureKuborLabel(&labels, pl.ArtifactId, project.ArtifactId.String())
+	ensureKuborLabel(&labels, pl.Release, support.NormalizeLabelValue(project.Release))
 
 	return unstructured.SetNestedStringMap(target.Object, labels, fields...)
 }
@@ -45,14 +45,14 @@ func ensureKuborLabel(labels *map[string]string, label model.Label, value string
 	case model.LabelActionDrop:
 		delete(*labels, label.Name.String())
 	case model.LabelActionSet:
-		(*labels)[label.Name.String()] = support.NormalizeLabelValue(value)
+		(*labels)[label.Name.String()] = value
 	case model.LabelActionSetIfAbsent:
 		if _, exist := (*labels)[label.Name.String()]; !exist {
-			(*labels)[label.Name.String()] = support.NormalizeLabelValue(value)
+			(*labels)[label.Name.String()] = value
 		}
 	case model.LabelActionSetIfExists:
 		if _, exist := (*labels)[label.Name.String()]; exist {
-			(*labels)[label.Name.String()] = support.NormalizeLabelValue(value)
+			(*labels)[label.Name.String()] = value
 		}
 	}
 }

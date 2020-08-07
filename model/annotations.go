@@ -7,6 +7,7 @@ const (
 	AnnotationApplyOn   = "kubor.echocat.org/apply-on"
 	AnnotationDryRunOn  = "kubor.echocat.org/dry-run-on"
 	AnnotationWaitUntil = "kubor.echocat.org/wait-until"
+	AnnotationCleanupOn = "kubor.echocat.org/cleanup-on"
 )
 
 type Annotations struct {
@@ -14,6 +15,7 @@ type Annotations struct {
 	ApplyOn   Annotation `yaml:"applyOn,omitempty" json:"applyOn,omitempty"`
 	DryRunOn  Annotation `yaml:"dryRunOn,omitempty" json:"dryRunOn,omitempty"`
 	WaitUntil Annotation `yaml:"waitUntil,omitempty" json:"waitUntil,omitempty"`
+	CleanupOn Annotation `yaml:"cleanupOn,omitempty" json:"cleanupOn,omitempty"`
 }
 
 func newAnnotations() Annotations {
@@ -22,6 +24,7 @@ func newAnnotations() Annotations {
 		ApplyOn:   Annotation{AnnotationApplyOn, AnnotationActionDrop},
 		DryRunOn:  Annotation{AnnotationDryRunOn, AnnotationActionDrop},
 		WaitUntil: Annotation{AnnotationWaitUntil, AnnotationActionDrop},
+		CleanupOn: Annotation{AnnotationCleanupOn, AnnotationActionLeave},
 	}
 }
 
@@ -62,5 +65,15 @@ func (instance Annotations) GetWaitUntilFor(v *unstructured.Unstructured) (WaitU
 		return WaitUntilDefault, nil
 	}
 	var result WaitUntil
+	return result, result.Set(plain)
+}
+
+func (instance Annotations) GetCleanupOn(v *unstructured.Unstructured) (CleanupOn, error) {
+	as := v.GetAnnotations()
+	plain := as[string(instance.CleanupOn.Name)]
+	if plain == "" {
+		return CleanupOnAutomatic, nil
+	}
+	var result CleanupOn
 	return result, result.Set(plain)
 }
