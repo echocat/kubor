@@ -76,7 +76,6 @@ func loadDefaultClaimedGroupVersionKinds() GroupVersionKinds {
 	)
 	s.AddKnownTypes(v1.SchemeGroupVersion,
 		&v1.Namespace{},
-		&v1.Pod{},
 		&v1.Service{},
 		&v1.Secret{},
 		&v1.ServiceAccount{},
