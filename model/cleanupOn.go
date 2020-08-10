@@ -87,7 +87,7 @@ func (instance CleanupOn) OnExecuted() bool {
 	}
 }
 
-func (instance CleanupOn) OnPurge() bool {
+func (instance CleanupOn) OnDelete() bool {
 	switch instance {
 	case CleanupOnNever:
 		return false

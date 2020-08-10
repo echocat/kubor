@@ -110,7 +110,7 @@ func (instance *Apply) isCleanupAllowed() bool {
 }
 
 func (instance *Apply) RunWithArguments(arguments Arguments) error {
-	ct, err := kubernetes.NewCleanupTask(arguments.Project, arguments.DynamicClient)
+	ct, err := kubernetes.NewCleanupTask(arguments.Project, arguments.DynamicClient, kubernetes.CleanupModeOrphans)
 	if err != nil {
 		return err
 	}
@@ -147,7 +147,7 @@ func (instance *Apply) RunWithArguments(arguments Arguments) error {
 		}
 	}
 
-	if instance.isCleanupAllowed() {
+	if instance.Cleanup && instance.isCleanupAllowed() {
 		if err := ct.Execute(); err != nil {
 			return err
 		}

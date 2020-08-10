@@ -25,14 +25,14 @@ func (instance *Cleanup) ConfigureCliCommands(context string, hc common.HasComma
 		return nil
 	}
 
-	hc.Command("cleanup", "Will remove all orphaned resources which matches the current"+
-		" project's groupId and artifactId but where not part of the evaluated environment.").
+	hc.Command("cleanup", "Will delete all orphaned resources which matches the current"+
+		" project's groupId and artifactId but where not part of the evaluated environment in the configured claim.").
 		Action(instance.ExecuteFromCli)
 	return nil
 }
 
 func (instance *Cleanup) RunWithArguments(arguments Arguments) error {
-	ct, err := kubernetes.NewCleanupTask(arguments.Project, arguments.DynamicClient)
+	ct, err := kubernetes.NewCleanupTask(arguments.Project, arguments.DynamicClient, kubernetes.CleanupModeOrphans)
 	if err != nil {
 		return err
 	}

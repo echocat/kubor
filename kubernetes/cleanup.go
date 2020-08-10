@@ -6,8 +6,10 @@ import (
 	"github.com/echocat/kubor/model"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/dynamic"
+	"strings"
 	"time"
 )
 
@@ -15,12 +17,14 @@ type CleanupTask struct {
 	project *model.Project
 	keep    gvked
 	client  dynamic.Interface
+	mode    CleanupMode
 }
 
-func NewCleanupTask(project *model.Project, client dynamic.Interface) (CleanupTask, error) {
+func NewCleanupTask(project *model.Project, client dynamic.Interface, mode CleanupMode) (CleanupTask, error) {
 	return CleanupTask{
 		project: project,
 		client:  client,
+		mode:    mode,
 	}, nil
 }
 
@@ -44,7 +48,8 @@ func (instance *CleanupTask) Execute() error {
 }
 
 func (instance *CleanupTask) ExecuteIn(namespace model.Namespace) (err error) {
-	l := log.WithField("namespace", namespace)
+	l := log.WithField("namespace", namespace).
+		WithField("mode", instance.mode)
 
 	start := time.Now()
 
@@ -67,16 +72,28 @@ func (instance *CleanupTask) ExecuteIn(namespace model.Namespace) (err error) {
 
 	l.Debug("Cleanup namespace %v if required...", namespace)
 
+	handledGvks := model.GroupVersionKinds{}
 	for gvk := range instance.project.Claim.GroupVersionKinds {
-		if err := instance.executeFor(l, namespace, gvk); err != nil {
-			return err
+		respect := true
+		for twin := range model.DefaultGroupVersionKindRegistry.GetTwins(gvk) {
+			if handledGvks[twin] {
+				respect = false
+			}
+		}
+
+		if respect {
+			if foundAtLeastOne, err := instance.executeFor(l, namespace, gvk); err != nil {
+				return err
+			} else if foundAtLeastOne {
+				handledGvks[gvk] = true
+			}
 		}
 	}
 
 	return nil
 }
 
-func (instance *CleanupTask) executeFor(l log.Logger, namespace model.Namespace, gvk model.GroupVersionKind) (err error) {
+func (instance *CleanupTask) executeFor(l log.Logger, namespace model.Namespace, gvk model.GroupVersionKind) (foundAtLeastOne bool, err error) {
 	l = l.WithField("gvk", gvk)
 
 	start := time.Now()
@@ -102,36 +119,68 @@ func (instance *CleanupTask) executeFor(l log.Logger, namespace model.Namespace,
 		list, err := resource.List(opts)
 		if err != nil {
 			if as, ok := err.(errors.APIStatus); ok && as.Status().Code == 404 {
-				return nil
+				return false, nil
 			}
-			return fmt.Errorf("cannot collect existing elements of type %v: %w", gvr, err)
+			return false, fmt.Errorf("cannot collect existing elements of type %v: %w", gvr, err)
 		}
 
 		for _, candidate := range list.Items {
+			foundAtLeastOne = true
 			reference, err := GetObjectReference(&candidate, instance.project.Scheme)
 			if err != nil {
 				l.WithError(err).
 					WithField("reference", fmt.Sprintf("%v %v/%v", candidate.GroupVersionKind(), candidate.GetName(), candidate.GetNamespace())).
-					Warn("Cannot evaluate object. Skipping it...")
+					Warn("Cannot evaluate %v. Skipping it...", instance.mode.AffectedDescription(false, false))
 				continue
 			}
-			if instance.keep.has(reference) {
+
+			if instance.shouldBeKept(reference) {
 				l.WithField("reference", reference).
-					Trace("Element %v will be kept.", reference)
+					Trace("%v %v is part of the deployment and will be kept.", instance.mode.AffectedDescription(false, true), reference)
 				continue
 			}
-			//TODO! Check if we're allowed to delete it.
+
+			if instance.hasOwner(&candidate) {
+				l.WithField("reference", reference).
+					Trace("%v %v has an owner and will therefore be kept.", instance.mode.AffectedDescription(false, true), reference)
+				continue
+			}
+
+			if allowedToBeDeleted, err := instance.isAllowedToBeDeleted(&candidate); err != nil {
+				return false, err
+			} else if !allowedToBeDeleted {
+				l.WithField("reference", reference).
+					Trace("%v %v is not allowed to be deleted in mode %v and will therefore be kept.",
+						instance.mode.AffectedDescription(false, true), reference, instance.mode)
+				continue
+			}
+
 			if err := instance.delete(resource, reference); err != nil {
-				return err
+				return false, err
 			}
 		}
 
 		if v := list.GetContinue(); v != "" {
 			opts.Continue = v
 		} else {
-			return nil
+			return foundAtLeastOne, nil
 		}
 	}
+}
+
+func (instance *CleanupTask) shouldBeKept(reference model.ObjectReference) bool {
+	if len(instance.keep) == 0 {
+		return false
+	}
+	if instance.keep.has(reference) {
+		return true
+	}
+	for _, twin := range reference.AllTwinsBy(model.DefaultGroupVersionKindRegistry) {
+		if instance.keep.has(twin) {
+			return true
+		}
+	}
+	return false
 }
 
 func (instance *CleanupTask) delete(resource dynamic.ResourceInterface, reference model.ObjectReference) (err error) {
@@ -146,30 +195,50 @@ func (instance *CleanupTask) delete(resource dynamic.ResourceInterface, referenc
 				WithError(err).
 				WithField("status", "failed")
 			if ldd.IsDebugEnabled() {
-				ldd.Error("Deleting orphan %v... FAILED!", reference)
+				ldd.Error("Deleting %v %v... FAILED!", instance.mode.AffectedDescription(false, false), reference)
 			} else {
-				ldd.Error("Was not able to delete orphan %v.", reference)
+				ldd.Error("Was not able to delete %v %v.", instance.mode.AffectedDescription(false, false), reference)
 			}
 		} else {
 			ldd := ld.WithField("status", "success")
 			if ldd.IsDebugEnabled() {
-				ldd.Info("Deleting orphan %v... DONE!", reference)
+				ldd.Info("Deleting %v %v... DONE!", instance.mode.AffectedDescription(false, false), reference)
 			} else {
-				ldd.Info("Orphan %v deleted.", reference)
+				ldd.Info("%v %v deleted.", instance.mode.AffectedDescription(false, true), reference)
 			}
 		}
 	}()
 
-	l.Debug("Deleting orphan %v...", reference)
+	l.Debug("Deleting %v %v...", instance.mode.AffectedDescription(false, false), reference)
 
 	dp := metav1.DeletePropagationForeground
 	if err := resource.Delete(reference.Name.String(), &metav1.DeleteOptions{
 		PropagationPolicy: &dp,
 	}); err != nil {
-		return fmt.Errorf("cannot delete resource: %w", err)
+		return fmt.Errorf("cannot delete %v: %w", instance.mode.AffectedDescription(false, false), err)
 	}
 
 	return nil
+}
+
+func (instance *CleanupTask) hasOwner(target *unstructured.Unstructured) bool {
+	result := len(target.GetOwnerReferences()) > 0
+	return result
+}
+
+func (instance *CleanupTask) isAllowedToBeDeleted(target *unstructured.Unstructured) (bool, error) {
+	rule, err := instance.project.Annotations.GetCleanupOn(target)
+	if err != nil {
+		return false, err
+	}
+	switch instance.mode {
+	case CleanupModeOrphans:
+		return rule.OnOrphaned(), nil
+	case CleanupModeDelete:
+		return rule.OnDelete(), nil
+	default:
+		return false, nil
+	}
 }
 
 func (instance *CleanupTask) labelSelector() string {
@@ -256,4 +325,43 @@ func (instance gvked) has(reference model.ObjectReference) bool {
 		return false
 	}
 	return instance[reference.GroupVersionKind].has(reference)
+}
+
+type CleanupMode uint8
+
+const (
+	CleanupModeOrphans = CleanupMode(0)
+	CleanupModeDelete  = CleanupMode(1)
+)
+
+func (instance CleanupMode) String() string {
+	switch instance {
+	case CleanupModeOrphans:
+		return "orphans"
+	case CleanupModeDelete:
+		return "everything"
+	default:
+		return fmt.Sprintf("unknown-%d", instance)
+	}
+}
+
+func (instance CleanupMode) AffectedDescription(plural bool, capitalize bool) (result string) {
+	defer func() {
+		if capitalize {
+			result = strings.Title(result)
+		}
+	}()
+
+	switch instance {
+	case CleanupModeOrphans:
+		if plural {
+			return "orphans"
+		}
+		return "orphan"
+	default:
+		if plural {
+			return "elements"
+		}
+		return "element"
+	}
 }
