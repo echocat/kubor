@@ -1,24 +1,16 @@
 package kubernetes
 
 import (
+	"github.com/echocat/kubor/model"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"strconv"
 	"strings"
 )
 
-func GroupVersionKindToTypeMeta(kind schema.GroupVersionKind) metav1.TypeMeta {
+func GroupVersionKindToTypeMeta(kind model.GroupVersionKind) metav1.TypeMeta {
 	return metav1.TypeMeta{
 		Kind:       strings.ToLower(kind.Kind),
 		APIVersion: strings.ToLower(kind.Version),
-	}
-}
-
-func NormalizeGroupVersionKind(in schema.GroupVersionKind) schema.GroupVersionKind {
-	return schema.GroupVersionKind{
-		Group:   strings.ToLower(in.Group),
-		Version: strings.ToLower(in.Version),
-		Kind:    strings.ToLower(in.Kind),
 	}
 }
 

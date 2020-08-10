@@ -3,6 +3,7 @@ package kubernetes
 import (
 	"errors"
 	"fmt"
+	"github.com/echocat/kubor/model"
 	"github.com/googleapis/gnostic/OpenAPIv2"
 	"gopkg.in/yaml.v2"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -12,63 +13,24 @@ import (
 	"reflect"
 )
 
-const (
-	NowhereDryRun          DryRunOn = "nowhere"
-	ClientDryRun           DryRunOn = "client"
-	ServerDryRun           DryRunOn = "server"
-	ServerIfPossibleDryRun DryRunOn = "serverIfPossible"
-)
-
-type DryRunOn string
-
-func (instance DryRunOn) String() string {
-	return string(instance)
-}
-
-func (instance *DryRunOn) Set(plain string) error {
-	candidate := DryRunOn(plain)
-	switch candidate {
-	case NowhereDryRun, ClientDryRun, ServerDryRun, ServerIfPossibleDryRun:
-		*instance = candidate
-		return nil
-	default:
-		return fmt.Errorf("unknown dryRunOn: %v", candidate)
-	}
-}
-
-func (instance DryRunOn) IsEnabled() bool {
-	switch instance {
-	case ServerIfPossibleDryRun:
-		panic("This should not be called directly. Please resolve this before in your code to either server or client.")
-	case ClientDryRun, ServerDryRun:
-		return true
-	default:
-		return false
-	}
-}
-
-func (instance DryRunOn) Resolve(gvk schema.GroupVersionKind, client dynamic.Interface, runtime Runtime) (DryRunOn, error) {
-	if instance == ServerIfPossibleDryRun || instance == ServerDryRun {
+func ResolveDryRun(in model.DryRunOn, gvk model.GroupVersionKind, client dynamic.Interface, runtime Runtime) (model.DryRunOn, error) {
+	if in == model.DryRunOnServerIfPossible || in == model.DryRunOnServer {
 		if serverSidePossible, err := HasServerDryRunSupport(gvk, client, runtime); err != nil {
-			return DryRunOn(""), err
-		} else if instance == ServerDryRun {
+			return "", err
+		} else if in == model.DryRunOnServer {
 			if !serverSidePossible {
-				return DryRunOn(""), fmt.Errorf("%v does not support server side dry run", gvk)
+				return "", fmt.Errorf("%v does not support server side dry run", gvk)
 			}
 		} else if serverSidePossible {
-			return ServerDryRun, nil
+			return model.DryRunOnServer, nil
 		} else {
-			return ClientDryRun, nil
+			return model.DryRunOnClient, nil
 		}
 	}
-	return instance, nil
+	return in, nil
 }
 
-func (instance *DryRunOn) Get() interface{} {
-	return instance
-}
-
-func HasServerDryRunSupport(gvk schema.GroupVersionKind, client dynamic.Interface, runtime Runtime) (bool, error) {
+func HasServerDryRunSupport(gvk model.GroupVersionKind, client dynamic.Interface, runtime Runtime) (bool, error) {
 	oapi, err := runtime.OpenAPISchema()
 	if err != nil {
 		return false, fmt.Errorf("failed to download openapi: %v", err)
@@ -76,7 +38,7 @@ func HasServerDryRunSupport(gvk schema.GroupVersionKind, client dynamic.Interfac
 	supports, err := supportsServerDryRun(oapi, gvk)
 	if err != nil {
 		// We assume that we couldn't find the type, then check for namespace:
-		supports, _ = supportsServerDryRun(oapi, schema.GroupVersionKind{Group: "", Version: "v1", Kind: "Namespace"})
+		supports, _ = supportsServerDryRun(oapi, model.GroupVersionKind{Group: "", Version: "v1", Kind: "Namespace"})
 		// If namespace supports dryRun, then we will support dryRun for CRDs only.
 		if supports {
 			if supports, err = hasCrd(gvk.GroupKind(), client); err != nil {
@@ -87,7 +49,7 @@ func HasServerDryRunSupport(gvk schema.GroupVersionKind, client dynamic.Interfac
 	return supports, nil
 }
 
-func hasGvkExtension(extensions []*openapi_v2.NamedAny, gvk schema.GroupVersionKind) bool {
+func hasGvkExtension(extensions []*openapi_v2.NamedAny, gvk model.GroupVersionKind) bool {
 	for _, extension := range extensions {
 		if extension.GetValue().GetYaml() == "" ||
 			extension.GetName() != "x-kubernetes-group-version-kind" {
@@ -110,7 +72,7 @@ func hasGvkExtension(extensions []*openapi_v2.NamedAny, gvk schema.GroupVersionK
 // SupportsDryRun is a method that let's us look in the OpenAPI if the
 // specific group-version-kind supports the dryRun query parameter for
 // the PATCH end-point.
-func supportsServerDryRun(doc *openapi_v2.Document, gvk schema.GroupVersionKind) (bool, error) {
+func supportsServerDryRun(doc *openapi_v2.Document, gvk model.GroupVersionKind) (bool, error) {
 	for _, path := range doc.GetPaths().GetPath() {
 		// Is this describing the gvk we're looking for?
 		if !hasGvkExtension(path.GetValue().GetPatch().GetVendorExtension(), gvk) {

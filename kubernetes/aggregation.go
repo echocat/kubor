@@ -2,6 +2,7 @@ package kubernetes
 
 import (
 	"github.com/echocat/kubor/common"
+	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"reflect"
@@ -15,12 +16,20 @@ func IsReady(object runtime.Object) *bool {
 	return nil
 }
 
+func StateOf(object runtime.Object) *State {
+	if us, ok := object.(*unstructured.Unstructured); ok {
+		return NewAggregationFor(us).State()
+	}
+	return nil
+}
+
 type Aggregation interface {
 	Desired() *int32
 	Ready() *int32
 	UpToDate() *int32
 	Available() *int32
 	IsReady() *bool
+	State() *State
 }
 
 func NewAggregationFor(object *unstructured.Unstructured) Aggregation {
@@ -63,6 +72,10 @@ func (instance AnonymousAggregation) IsReady() *bool {
 	return nil
 }
 
+func (instance AnonymousAggregation) State() *State {
+	return nil
+}
+
 type DeploymentAggregation struct {
 	AnonymousAggregation
 }
@@ -87,6 +100,10 @@ func (instance DeploymentAggregation) IsReady() *bool {
 	desired := instance.Desired()
 	available := instance.Available()
 	return Pbool(desired != nil && available != nil && *desired <= *available)
+}
+
+func (instance DeploymentAggregation) State() *State {
+	return nil
 }
 
 type DaemonSetAggregation struct {
@@ -115,6 +132,10 @@ func (instance DaemonSetAggregation) IsReady() *bool {
 	return Pbool(desired != nil && available != nil && *desired <= *available)
 }
 
+func (instance DaemonSetAggregation) State() *State {
+	return nil
+}
+
 type StatefulSetAggregation struct {
 	AnonymousAggregation
 }
@@ -139,6 +160,10 @@ func (instance StatefulSetAggregation) IsReady() *bool {
 	desired := instance.Desired()
 	ready := instance.Ready()
 	return Pbool(desired != nil && ready != nil && *desired <= *ready)
+}
+
+func (instance StatefulSetAggregation) State() *State {
+	return nil
 }
 
 type PodAggregation struct {
@@ -196,4 +221,55 @@ func (instance PodAggregation) IsReady() *bool {
 	desired := instance.Desired()
 	ready := instance.Ready()
 	return Pbool(desired != nil && ready != nil && *desired <= *ready)
+}
+
+func (instance PodAggregation) State() *State {
+	plain, found, err := unstructured.NestedString(instance.Object, "status", "phase")
+	if !found || err != nil {
+		return PState(StateUnknown)
+	}
+	switch v1.PodPhase(plain) {
+	case v1.PodPending:
+		return PState(StatePending)
+	case v1.PodRunning:
+		return PState(StateRunning)
+	case v1.PodSucceeded:
+		return PState(StateSucceeded)
+	case v1.PodFailed:
+		return PState(StateFailed)
+	default:
+		return PState(StateUnknown)
+	}
+}
+
+type State uint8
+
+const (
+	StateUnknown   = State(0)
+	StatePending   = State(1)
+	StateRunning   = State(2)
+	StateSucceeded = State(3)
+	StateFailed    = State(4)
+)
+
+func PState(in State) *State {
+	return &in
+}
+
+func (instance State) IsActive() bool {
+	switch instance {
+	case StatePending, StateRunning:
+		return true
+	default:
+		return false
+	}
+}
+
+func (instance State) IsDone() bool {
+	switch instance {
+	case StateSucceeded, StateFailed:
+		return true
+	default:
+		return false
+	}
 }

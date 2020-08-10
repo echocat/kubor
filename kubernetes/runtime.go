@@ -3,16 +3,19 @@ package kubernetes
 import (
 	"github.com/googleapis/gnostic/OpenAPIv2"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/dynamic"
 	dynamicFake "k8s.io/client-go/dynamic/fake"
-	restclient "k8s.io/client-go/rest"
+	"k8s.io/client-go/rest"
+	restFake "k8s.io/client-go/rest/fake"
 	"k8s.io/client-go/tools/clientcmd"
 )
 
 type Runtime interface {
 	ContextName() string
 	NewDynamicClient() (dynamic.Interface, error)
+	NewRestClient(gvk schema.GroupVersionKind) (rest.Interface, error)
 
 	discovery.OpenAPISchemaInterface
 }
@@ -34,7 +37,7 @@ func newRuntimeImpl(clientConfig clientcmd.ClientConfig, contextName string) (*r
 }
 
 type runtimeImpl struct {
-	config      *restclient.Config
+	config      *rest.Config
 	contextName string
 
 	discoveryClient discovery.DiscoveryInterface
@@ -42,6 +45,14 @@ type runtimeImpl struct {
 
 func (instance *runtimeImpl) NewDynamicClient() (dynamic.Interface, error) {
 	return dynamic.NewForConfig(instance.config)
+}
+
+func (instance *runtimeImpl) NewRestClient(gvk schema.GroupVersionKind) (rest.Interface, error) {
+	config := dynamic.ConfigFor(instance.config)
+	gv := gvk.GroupVersion()
+	config.GroupVersion = &gv
+	config.APIPath = "/api"
+	return rest.RESTClientFor(config)
 }
 
 func (instance *runtimeImpl) ContextName() string {
@@ -66,6 +77,12 @@ type runtimeMock struct {
 
 func (instance *runtimeMock) NewDynamicClient() (dynamic.Interface, error) {
 	return dynamicFake.NewSimpleDynamicClient(instance.scheme), nil
+}
+
+func (instance *runtimeMock) NewRestClient(gvk schema.GroupVersionKind) (rest.Interface, error) {
+	return &restFake.RESTClient{
+		GroupVersion: gvk.GroupVersion(),
+	}, nil
 }
 
 func (instance *runtimeMock) ContextName() string {

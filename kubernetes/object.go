@@ -2,6 +2,7 @@ package kubernetes
 
 import (
 	"fmt"
+	"github.com/echocat/kubor/model"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	rbacv1alpha1 "k8s.io/api/rbac/v1alpha1"
@@ -17,77 +18,108 @@ import (
 	"reflect"
 )
 
-var expectedNamespaceAbsentGvks = map[schema.GroupVersionKind]bool{
-	corev1.SchemeGroupVersion.WithKind("namespace"): true,
-
-	apiextensions.SchemeGroupVersion.WithKind("customresourcedefinition"):        true,
-	apiextensionsv1.SchemeGroupVersion.WithKind("customresourcedefinition"):      true,
-	apiextensionsv1beta1.SchemeGroupVersion.WithKind("customresourcedefinition"): true,
-
-	rbacv1.SchemeGroupVersion.WithKind("clusterrole"):              true,
-	rbacv1.SchemeGroupVersion.WithKind("clusterrolebinding"):       true,
-	rbacv1beta1.SchemeGroupVersion.WithKind("clusterrole"):         true,
-	rbacv1beta1.SchemeGroupVersion.WithKind("clusterrolebinding"):  true,
-	rbacv1alpha1.SchemeGroupVersion.WithKind("clusterrole"):        true,
-	rbacv1alpha1.SchemeGroupVersion.WithKind("clusterrolebinding"): true,
-}
+var expectedNamespaceAbsentGvks = func() model.GroupVersionKinds {
+	s := runtime.NewScheme()
+	s.AddKnownTypes(corev1.SchemeGroupVersion,
+		&corev1.Namespace{},
+	)
+	s.AddKnownTypes(apiextensions.SchemeGroupVersion,
+		&apiextensions.CustomResourceDefinition{},
+	)
+	s.AddKnownTypes(apiextensionsv1.SchemeGroupVersion,
+		&apiextensionsv1.CustomResourceDefinition{},
+	)
+	s.AddKnownTypes(apiextensionsv1beta1.SchemeGroupVersion,
+		&apiextensionsv1beta1.CustomResourceDefinition{},
+	)
+	s.AddKnownTypes(rbacv1.SchemeGroupVersion,
+		&rbacv1.ClusterRole{},
+		&rbacv1.ClusterRoleBinding{},
+	)
+	s.AddKnownTypes(rbacv1beta1.SchemeGroupVersion,
+		&rbacv1beta1.ClusterRole{},
+		&rbacv1beta1.ClusterRoleBinding{},
+	)
+	s.AddKnownTypes(rbacv1alpha1.SchemeGroupVersion,
+		&rbacv1alpha1.ClusterRole{},
+		&rbacv1alpha1.ClusterRoleBinding{},
+	)
+	return model.MapToGroupVersionKinds(s.AllKnownTypes())
+}()
 
 type ObjectValidator interface {
-	IsNamespaced(what schema.GroupVersionKind) *bool
+	IsNamespaced(what model.GroupVersionKind) *bool
 }
 
 type ObjectInfo struct {
-	Kind                 schema.GroupVersionKind
-	Name                 string
-	Namespace            string
-	TypeMeta             metav1.TypeMeta
-	GroupVersionResource schema.GroupVersionResource
+	model.ObjectReference
+	TypeMeta metav1.TypeMeta
+	Resource schema.GroupVersionResource
 }
 
 func GetObjectInfo(object runtime.Object, by ObjectValidator) (ObjectInfo, error) {
+	reference, err := GetObjectReference(object, by)
+	if err != nil {
+		return ObjectInfo{}, err
+	}
+	groupVersionResource, _ := meta.UnsafeGuessKindToResource(reference.GroupVersionKind.Bare())
+	typeMeta := GroupVersionKindToTypeMeta(reference.GroupVersionKind)
+
+	return ObjectInfo{
+		ObjectReference: reference,
+		TypeMeta:        typeMeta,
+		Resource:        groupVersionResource,
+	}, nil
+}
+
+func (instance ObjectInfo) String() string {
+	return instance.ObjectReference.String()
+}
+
+func GetObjectReference(object runtime.Object, by ObjectValidator) (model.ObjectReference, error) {
 	objk, ok := object.(schema.ObjectKind)
 	if !ok {
-		return ObjectInfo{}, fmt.Errorf("%v is not of type schema.ObjectKind", reflect.TypeOf(object))
+		return model.ObjectReference{}, fmt.Errorf("%v is not of type schema.ObjectKind", reflect.TypeOf(object))
 	}
 	objv, ok := object.(v1.Object)
 	if !ok {
-		return ObjectInfo{}, fmt.Errorf("%v is not of type v1.Object", reflect.TypeOf(object))
+		return model.ObjectReference{}, fmt.Errorf("%v is not of type v1.Object", reflect.TypeOf(object))
 	}
-	gvk := objk.GroupVersionKind()
+	gvk := model.GroupVersionKind(objk.GroupVersionKind()).Normalize()
 	if gvk.Kind == "" {
-		return ObjectInfo{}, fmt.Errorf("kind is not set or empty")
+		return model.ObjectReference{}, fmt.Errorf("kind is not set or empty")
 	}
 	if gvk.Version == "" {
-		return ObjectInfo{}, fmt.Errorf("apiVersion is not set or empty")
+		return model.ObjectReference{}, fmt.Errorf("apiVersion is not set or empty")
 	}
-	groupVersionResource, _ := meta.UnsafeGuessKindToResource(gvk)
-	typeMeta := GroupVersionKindToTypeMeta(gvk)
-	namespace := objv.GetNamespace()
+	namespace := model.Namespace(objv.GetNamespace())
 
 	var namespaceExpectation bool
 	if expectation := by.IsNamespaced(gvk); expectation != nil {
 		namespaceExpectation = *expectation
 	} else {
-		namespaceExpectation = !expectedNamespaceAbsentGvks[NormalizeGroupVersionKind(gvk)]
+		_, found := expectedNamespaceAbsentGvks[gvk]
+		namespaceExpectation = !found
 	}
 	if namespace == "" && namespaceExpectation {
-		return ObjectInfo{}, fmt.Errorf("meta.namespace is not set or empty, but requird for %v", gvk)
+		return model.ObjectReference{}, fmt.Errorf("meta.namespace is not set or empty, but requird for %v", gvk)
 	} else if namespace != "" && !namespaceExpectation {
-		return ObjectInfo{}, fmt.Errorf("meta.namespace is set, but requird to be absent for %v", gvk)
+		return model.ObjectReference{}, fmt.Errorf("meta.namespace is set, but requird to be absent for %v", gvk)
+	} else if _, err := namespace.MarshalText(); err != nil {
+		return model.ObjectReference{}, fmt.Errorf("illegal meta.namespace for %v: %w", gvk, err)
 	}
-	name := objv.GetName()
-	if name == "" {
-		return ObjectInfo{}, fmt.Errorf("meta.name is not set or empty")
+	pname := objv.GetName()
+	if pname == "" {
+		return model.ObjectReference{}, fmt.Errorf("meta.name is not set or empty")
 	}
-	return ObjectInfo{
-		Kind:                 gvk,
-		Name:                 name,
-		Namespace:            namespace,
-		TypeMeta:             typeMeta,
-		GroupVersionResource: groupVersionResource,
-	}, nil
-}
+	var name model.Name
+	if err := name.Set(pname); err != nil {
+		return model.ObjectReference{}, fmt.Errorf("illegal meta.name: %w", err)
+	}
 
-func (instance ObjectInfo) String() string {
-	return fmt.Sprintf("%s/%s %s/%s", instance.TypeMeta.APIVersion, instance.TypeMeta.Kind, instance.Namespace, instance.Name)
+	return model.ObjectReference{
+		GroupVersionKind: gvk,
+		Name:             name,
+		Namespace:        namespace,
+	}, nil
 }

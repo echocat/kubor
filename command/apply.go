@@ -2,6 +2,7 @@ package command
 
 import (
 	"fmt"
+	"github.com/alecthomas/kingpin"
 	"github.com/echocat/kubor/common"
 	"github.com/echocat/kubor/kubernetes"
 	"github.com/echocat/kubor/model"
@@ -11,24 +12,16 @@ import (
 	"time"
 )
 
-type DryRunType string
-
-func (instance *DryRunType) Set(plain string) error {
-	if plain != "before" && plain != "never" && plain != "only" {
-		return fmt.Errorf("unsupported dry run type: %s", plain)
-	}
-	*instance = DryRunType(plain)
-	return nil
-}
-
-func (instance DryRunType) String() string {
-	return string(instance)
-}
-
 func init() {
+	timeout := time.Minute * 5
 	cmd := &Apply{
-		DryRun:   DryRunType("before"),
-		DryRunOn: kubernetes.ServerIfPossibleDryRun,
+		Wait:       model.WaitUntil{Stage: model.WaitUntilStageApplied, Timeout: &timeout},
+		KeepAlive:  1 * time.Minute,
+		Predicate:  common.EvaluatingPredicate{},
+		DryRun:     model.DryRunBefore,
+		DryRunOn:   model.DryRunOnServerIfPossible,
+		StageRange: model.StageRange{},
+		Cleanup:    true,
 	}
 	cmd.Parent = cmd
 	RegisterInitializable(cmd)
@@ -38,11 +31,13 @@ func init() {
 type Apply struct {
 	Command
 
-	Wait      time.Duration
-	KeepAlive time.Duration
-	Predicate common.EvaluatingPredicate
-	DryRun    DryRunType
-	DryRunOn  kubernetes.DryRunOn
+	Wait       model.WaitUntil
+	KeepAlive  time.Duration
+	Predicate  common.EvaluatingPredicate
+	DryRun     model.DryRun
+	DryRunOn   model.DryRunOn
+	StageRange model.StageRange
+	Cleanup    bool
 }
 
 func (instance *Apply) ConfigureCliCommands(context string, hc common.HasCommands, _ string) error {
@@ -57,12 +52,12 @@ func (instance *Apply) ConfigureCliCommands(context string, hc common.HasCommand
 		" running environment which was deployed. If it fails it will try to rollback.").
 		Short('w').
 		Envar("KUBOR_WAIT").
-		Default((time.Minute * 5).String()).
-		DurationVar(&instance.Wait)
+		Default(instance.Wait.String()).
+		SetValue(&instance.Wait)
 	cmd.Flag("keepAlive", "If set to value larger than 0 it will do keep alive actions while wait for "+
 		" completions.").
 		Envar("KUBOR_KEEP_ALIVE").
-		Default((time.Minute * 1).String()).
+		Default(instance.KeepAlive.String()).
 		DurationVar(&instance.KeepAlive)
 	cmd.Flag("predicate", "Filters every object that should be listed. Empty allows everything."+
 		" Example: \"{{.spec.name}}=Foo.*\"").
@@ -85,15 +80,45 @@ func (instance *Apply) ConfigureCliCommands(context string, hc common.HasCommand
 		Envar("KUBOR_DRY_RUN_ON").
 		Default(instance.DryRunOn.String()).
 		SetValue(&instance.DryRunOn)
+	cmd.Flag("stageRange", "If set it will specify from which to which stage kubor will execute"+
+		" the deployment."+
+		" Pattern: [<from-stage>]:[<to-stage>]. If one of the terms it means not limited.").
+		Envar("KUBOR_STAGE_RANGE").
+		Default(instance.StageRange.String()).
+		SetValue(&instance.StageRange)
+	cmd.Flag("cleanup", "If enabled (default) it will remove all orphaned resources which matches the current"+
+		" project's groupId and artifactId but where not part of the evaluated environment."+
+		" This will be skipped in any way if either --predicate or --stage-range is defined.").
+		Envar("KUBOR_CLEANUP").
+		Default(fmt.Sprint(instance.Cleanup)).
+		BoolVar(&instance.Cleanup)
+
+	cmd.Validate(func(clause *kingpin.CmdClause) error {
+		switch instance.Wait.Stage {
+		case model.WaitUntilStageApplied, model.WaitUntilStageNever:
+			return nil
+		default:
+			return fmt.Errorf("--wait only support 'applied' or 'never', but got: %v", instance.Wait.Stage)
+		}
+	})
 
 	return nil
 }
 
+func (instance *Apply) isCleanupAllowed() bool {
+	return !instance.Predicate.IsRelevant() && !instance.StageRange.IsRelevant()
+}
+
 func (instance *Apply) RunWithArguments(arguments Arguments) error {
+	ct, err := kubernetes.NewCleanupTask(arguments.Project, arguments.DynamicClient, kubernetes.CleanupModeOrphans)
+	if err != nil {
+		return err
+	}
 	task := &applyTask{
 		source:        instance,
 		dynamicClient: arguments.DynamicClient,
 		arguments:     arguments,
+		cleanupTask:   &ct,
 	}
 	oh, err := model.NewObjectHandler(task.onObject, arguments.Project)
 	if err != nil {
@@ -110,49 +135,76 @@ func (instance *Apply) RunWithArguments(arguments Arguments) error {
 		return err
 	}
 
-	if instance.DryRun == DryRunType("before") || instance.DryRun == DryRunType("only") {
-		err = task.applySet.Execute(instance.DryRunOn)
-		if err != nil {
+	if instance.DryRun.IsDryRunAllowed() {
+		if _, err := task.stagedApplySet.Execute("dryRun", instance.DryRunOn, nil, false); err != nil {
 			return err
 		}
-		if instance.DryRun == DryRunType("only") {
-			return nil
+	}
+
+	if instance.DryRun.IsApplyAllowed() {
+		if _, err := task.stagedApplySet.Execute("apply", model.DryRunNowhere, &instance.Wait, true); err != nil {
+			return err
 		}
 	}
 
-	err = task.applySet.Execute(kubernetes.NowhereDryRun)
-	if err != nil {
-		return err
+	if instance.Cleanup && instance.isCleanupAllowed() {
+		if err := ct.Execute(); err != nil {
+			return err
+		}
 	}
 
-	if task.source.Wait <= 0 {
-		return nil
-	}
-
-	return task.applySet.Wait(task.source.Wait)
+	return nil
 }
 
 type applyTask struct {
-	source        *Apply
-	dynamicClient dynamic.Interface
-	applySet      kubernetes.ApplySet
-	arguments     Arguments
+	source         *Apply
+	dynamicClient  dynamic.Interface
+	stagedApplySet kubernetes.StagedApplySet
+	cleanupTask    *kubernetes.CleanupTask
+	arguments      Arguments
 }
 
-func (instance *applyTask) onObject(source string, _ runtime.Object, unstructured *unstructured.Unstructured) error {
-	if matches, err := instance.source.Predicate.Matches(unstructured.Object); err != nil {
+func (instance *applyTask) onObject(source string, _ runtime.Object, object *unstructured.Unstructured) error {
+	if matches, err := instance.source.Predicate.Matches(object.Object); err != nil {
 		return err
 	} else if !matches {
 		return nil
 	}
 
-	apply, err := kubernetes.NewApplyObject(source, unstructured, instance.dynamicClient, instance.arguments.Runtime, instance.arguments.Project.Validation.Schema)
+	apply, err := kubernetes.NewApplyObject(
+		instance.arguments.Project,
+		source,
+		object,
+		instance.dynamicClient,
+		instance.arguments.Runtime,
+	)
 	if err != nil {
 		return err
 	}
 	apply.KeepAliveInterval = instance.source.KeepAlive
 
-	instance.applySet.Add(apply)
+	reference, err := kubernetes.GetObjectReference(object, instance.arguments.Project.Scheme)
+	if err != nil {
+		return err
+	}
+
+	stage, err := instance.arguments.Project.Annotations.GetStageFor(object)
+	if err != nil {
+		return err
+	}
+
+	if !instance.arguments.Project.Stages.Contains(stage) {
+		return fmt.Errorf("%v (source: %s) has defined an unknown stage: %v; project defines: %v", reference, source, stage, instance.arguments.Project.Stages)
+	}
+
+	if err := instance.arguments.Project.Claim.Validate(reference); err != nil {
+		return fmt.Errorf("%v (source: %s): %w", reference, source, err)
+	}
+
+	if instance.source.StageRange.Matches(instance.arguments.Project.Stages, stage) {
+		instance.stagedApplySet.Add(stage, apply)
+		instance.cleanupTask.Add(reference)
+	}
 
 	return nil
 }

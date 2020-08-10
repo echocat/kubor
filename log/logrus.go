@@ -152,15 +152,15 @@ func (instance *LogrusLogger) Init() error {
 		QuoteEmptyFields: true,
 	}
 	switch instance.ColorMode {
-	case LogrusColorMode("always"):
+	case "always":
 		textFormatter.ForceColors = true
-	case LogrusColorMode("never"):
+	case "never":
 		textFormatter.DisableColors = true
 	}
 
 	instance.Delegate.Formatter = textFormatter
 	switch instance.Format {
-	case LogrusFormat("json"):
+	case "json":
 		instance.Delegate.Formatter = &logrus.JSONFormatter{}
 	}
 	return nil

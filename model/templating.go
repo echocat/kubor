@@ -10,7 +10,7 @@ import (
 )
 
 type Templating struct {
-	TemplateFilePattern []string `yaml:"templateFilePattern,omitempty" json:"templateFilePattern,omitempty"`
+	TemplateFilePattern []string `yaml:"templateFilePattern" json:"templateFilePattern"`
 }
 
 func newTemplating() Templating {

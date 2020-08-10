@@ -19,7 +19,7 @@ type ContentProvider func() (name string, content []byte, err error)
 
 type OnObject func(source string, object runtime.Object, unstructured *unstructured.Unstructured) error
 
-func NewObjectHandler(onObject OnObject, project Project) (*ObjectHandler, error) {
+func NewObjectHandler(onObject OnObject, project *Project) (*ObjectHandler, error) {
 	return &ObjectHandler{
 		OnObject:     onObject,
 		Project:      project,
@@ -29,7 +29,7 @@ func NewObjectHandler(onObject OnObject, project Project) (*ObjectHandler, error
 
 type ObjectHandler struct {
 	OnObject OnObject
-	Project  Project
+	Project  *Project
 
 	Deserializer runtime.Decoder
 }
@@ -68,7 +68,7 @@ func (instance *ObjectHandler) handleContent(source string, content []byte) erro
 			if object, _, err := instance.Deserializer.Decode([]byte(part), nil, nil); runtime.IsNotRegisteredError(err) {
 				if unstr, nErr := instance.decodeUnstructured([]byte(part)); nErr != nil {
 					return fmt.Errorf("%s: %v", fSource, err)
-				} else if !instance.Project.Validation.Schema.IsIgnored(unstr.GroupVersionKind()) {
+				} else if !instance.Project.Scheme.IsIgnored(GroupVersionKind(unstr.GroupVersionKind())) {
 					return fmt.Errorf("%s: %v", fSource, err)
 				} else if err := instance.OnObject(fSource, unstr, unstr); err != nil {
 					return fmt.Errorf("%s: %v", fSource, err)

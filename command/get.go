@@ -78,7 +78,7 @@ func (instance *getTask) onObject(source string, _ runtime.Object, unstructured 
 		return nil
 	}
 
-	resource, err := kubernetes.GetObjectResource(unstructured, instance.arguments.DynamicClient, instance.arguments.Project.Validation.Schema)
+	resource, err := kubernetes.GetObjectResource(unstructured, instance.arguments.DynamicClient, instance.arguments.Project.Scheme)
 	if err != nil {
 		return err
 	}

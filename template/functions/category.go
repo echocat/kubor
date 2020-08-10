@@ -107,6 +107,8 @@ var CategoriesDefault = Categories{
 	"codecs":        CategoryCodecs,
 	"conversations": CategoryConversations,
 	"general":       CategoryGeneral,
+	"kubernetes":    CategoryKubernetes,
+	"ids":           CategoryIds,
 	"math":          CategoryMath,
 	"path":          CategoryPath,
 	"regexp":        CategoryRegexp,

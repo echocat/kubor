@@ -3,23 +3,25 @@ package model
 import (
 	"fmt"
 	"github.com/echocat/kubor/common"
-	"github.com/echocat/kubor/kubernetes"
 	"github.com/echocat/kubor/log"
 	"gopkg.in/yaml.v2"
 	"io"
 	"os"
 	"path/filepath"
-	"strings"
 )
 
 type Project struct {
 	// Values set using Load() method.
-	GroupId           string              `yaml:"groupId,omitempty" json:"groupId,omitempty"`
-	ArtifactId        string              `yaml:"artifactId" json:"artifactId"`
+	GroupId           Name                `yaml:"groupId,omitempty" json:"groupId,omitempty"`
+	ArtifactId        Name                `yaml:"artifactId" json:"artifactId"`
 	Release           string              `yaml:"release,omitempty" json:"release,omitempty"`
+	Claim             Claim               `yaml:"claim,omitempty" json:"claim,omitempty"`
+	Stages            Stages              `yaml:"stages,omitempty" json:"stages,omitempty"`
 	Templating        Templating          `yaml:"templating,omitempty" json:"templating,omitempty"`
 	ConditionalValues []ConditionalValues `yaml:"values,omitempty" json:"values,omitempty"`
-	Validation        Validation          `yaml:"validation,omitempty" json:"validation,omitempty"`
+	Labels            Labels              `yaml:"labels,omitempty" json:"labels,omitempty"`
+	Annotations       Annotations         `yaml:"annotations,omitempty" json:"annotations,omitempty"`
+	Scheme            Scheme              `yaml:"scheme,omitempty" json:"scheme,omitempty"`
 
 	// Values set using implicitly.
 	Source  string            `yaml:"-" json:"-"`
@@ -29,16 +31,19 @@ type Project struct {
 	Context string            `yaml:"-" json:"-"`
 }
 
-func newProject() Project {
-	return Project{
+func newProject() *Project {
+	return &Project{
+		Claim:             newClaim(),
 		Templating:        newTemplating(),
 		ConditionalValues: []ConditionalValues{},
 		Values:            Values{},
+		Labels:            newLabels(),
+		Annotations:       newAnnotations(),
 	}
 }
 
 func (instance Project) Validate() error {
-	if strings.TrimSpace(instance.ArtifactId) == "" {
+	if instance.ArtifactId == "" {
 		return fmt.Errorf("artifactId should not be empty")
 	}
 	return nil
@@ -70,12 +75,11 @@ func (instance Project) RenderedTemplateFile(file string, writer io.Writer) erro
 }
 
 type ProjectFactory struct {
-	kubernetes.Runtime
 	source         string
 	sourceRequired bool
 	values         Values
-	artifactId     string
-	groupId        string
+	artifactId     Name
+	groupId        Name
 	release        string
 }
 
@@ -83,37 +87,40 @@ func NewProjectFactory() *ProjectFactory {
 	return &ProjectFactory{}
 }
 
-func (instance *ProjectFactory) Create(runtime kubernetes.Runtime) (Project, error) {
+func (instance *ProjectFactory) Create(context string) (*Project, error) {
 	result := newProject()
-	result.Context = runtime.ContextName()
+	result.Context = context
 
 	if source, err := instance.resolveSource(); os.IsNotExist(err) {
 		if instance.sourceRequired {
-			return Project{}, fmt.Errorf("could not find source file '%s'", instance.source)
+			return nil, fmt.Errorf("could not find source file '%s'", instance.source)
 		}
 	} else if err != nil {
-		return Project{}, fmt.Errorf("cannot open source file '%s': %v", instance.source, err)
+		return nil, fmt.Errorf("cannot open source file '%s': %v", instance.source, err)
 	} else if f, err := os.Open(source); err != nil {
-		return Project{}, fmt.Errorf("cannot open source file '%s': %v", source, err)
+		return nil, fmt.Errorf("cannot open source file '%s': %v", source, err)
 	} else {
 		//noinspection GoUnhandledErrorResult
 		defer f.Close()
 		if err := yaml.NewDecoder(f).Decode(&result); err != nil {
-			return Project{}, fmt.Errorf("cannot read source file '%s': %v", source, err)
+			return nil, fmt.Errorf("cannot read source file '%s': %v", source, err)
 		} else if err := result.Validate(); err != nil {
-			return Project{}, fmt.Errorf("cannot read source file '%s': %v", source, err)
+			return nil, fmt.Errorf("cannot read source file '%s': %v", source, err)
 		}
 
 		if result, err = instance.populateStage1(source, result); err != nil {
-			return Project{}, err
+			return nil, err
 		}
 		if result, err = instance.populateStage2(result); err != nil {
-			return Project{}, err
+			return nil, err
+		}
+		if result, err = instance.populateStage3(result); err != nil {
+			return nil, err
 		}
 	}
 
 	if log.IsDebugEnabled() {
-		name := result.ArtifactId
+		name := result.ArtifactId.String()
 		l := log.
 			WithField("source", result.Source).
 			WithField("artifactId", result.ArtifactId)
@@ -168,8 +175,8 @@ func (instance *ProjectFactory) resolveSource() (string, error) {
 	}
 }
 
-func (instance *ProjectFactory) populateStage1(source string, input Project) (Project, error) {
-	result := input
+func (instance *ProjectFactory) populateStage1(source string, input *Project) (*Project, error) {
+	result := *input
 	result.Source = source
 	result.Root = filepath.Dir(result.Source)
 	result.Values = Values{}
@@ -189,20 +196,30 @@ func (instance *ProjectFactory) populateStage1(source string, input Project) (Pr
 		result.Release = "latest"
 	}
 	result.Env = common.Environ()
-	return result, nil
+	return &result, nil
 }
 
-func (instance *ProjectFactory) populateStage2(input Project) (Project, error) {
-	result := input
+func (instance *ProjectFactory) populateStage2(input *Project) (*Project, error) {
+	result := *input
 	for _, candidate := range input.ConditionalValues {
 		if ok, err := candidate.On.Matches(result); err != nil {
-			return Project{}, err
+			return nil, err
 		} else if ok {
 			result.Values = result.Values.MergeWith(candidate.Values)
 			result.Values = result.Values.MergeWith(instance.values)
 		}
 	}
-	return result, nil
+	return &result, nil
+}
+
+func (instance *ProjectFactory) populateStage3(input *Project) (*Project, error) {
+	result := *input
+	c, err := input.Claim.evaluate(input)
+	if err != nil {
+		return nil, err
+	}
+	result.Claim = c
+	return &result, nil
 }
 
 func (instance *ProjectFactory) ConfigureFlags(hf common.HasFlags) {
@@ -214,11 +231,11 @@ func (instance *ProjectFactory) ConfigureFlags(hf common.HasFlags) {
 	hf.Flag("groupId", "If set it will overrides groupId from source file.").
 		Envar("KUBOR_GROUP_ID").
 		PlaceHolder("<groupId>").
-		StringVar(&instance.groupId)
+		SetValue(&instance.groupId)
 	hf.Flag("artifactId", "If set it will overrides artifactId from source file.").
 		Envar("KUBOR_ARTIFACT_ID").
 		PlaceHolder("<artifactId>").
-		StringVar(&instance.artifactId)
+		SetValue(&instance.artifactId)
 	hf.Flag("release", "If set it will overrides release from source file.").
 		Envar("KUBOR_RELEASE").
 		PlaceHolder("<release>").
