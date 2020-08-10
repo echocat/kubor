@@ -3,10 +3,13 @@ package model
 import (
 	"errors"
 	"fmt"
+	"regexp"
 	"strings"
 )
 
 var (
+	namespaceRegexp = regexp.MustCompile(`^[a-z0-9]([-a-z0-9]*[a-z0-9])?$`)
+
 	ErrIllegalNamespace = errors.New("illegal namespace")
 )
 
@@ -22,12 +25,11 @@ func (instance Namespace) String() string {
 }
 
 func (instance Namespace) MarshalText() (text []byte, err error) {
-	if v, err := Name(instance).MarshalText(); err != nil {
-		return []byte(fmt.Sprintf("illega-namespace-%s", string(instance))),
+	if len(instance) > 0 && (!namespaceRegexp.MatchString(string(instance)) || len(instance) > 253) {
+		return []byte(fmt.Sprintf("illegal-namespace-%s", string(instance))),
 			fmt.Errorf("%w: %s", ErrIllegalNamespace, string(instance))
-	} else {
-		return v, nil
 	}
+	return []byte(instance), nil
 }
 
 func (instance *Namespace) UnmarshalText(text []byte) error {

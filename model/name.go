@@ -7,7 +7,7 @@ import (
 )
 
 var (
-	nameRegexp = regexp.MustCompile(`^[a-z0-9]([-a-z0-9]*[a-z0-9])?$`)
+	nameRegexp = regexp.MustCompile(`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`)
 
 	ErrIllegalName = errors.New("illegal name")
 )
@@ -25,7 +25,7 @@ func (instance Name) String() string {
 
 func (instance Name) MarshalText() (text []byte, err error) {
 	if len(instance) > 0 && (!nameRegexp.MatchString(string(instance)) || len(instance) > 253) {
-		return []byte(fmt.Sprintf("illega-name-%s", string(instance))),
+		return []byte(fmt.Sprintf("illegal-name-%s", string(instance))),
 			fmt.Errorf("%w: %s", ErrIllegalName, string(instance))
 	}
 	return []byte(instance), nil
