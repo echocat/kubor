@@ -119,7 +119,7 @@ func (instance *ShowTemplateFunctions) createPredicate() (func(name string) bool
 	regexps := make([]*regexp.Regexp, len(instance.FunctionNameFilters))
 	for i, pattern := range instance.FunctionNameFilters {
 		if r, err := regexp.Compile(pattern); err != nil {
-			return nil, fmt.Errorf("problems while compile function regexp pattern: %v", err)
+			return nil, fmt.Errorf("problems while compile function regexp pattern: %w", err)
 		} else {
 			regexps[i] = r
 		}

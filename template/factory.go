@@ -52,12 +52,12 @@ func (instance *FactoryImpl) NewFromFile(file string) (Template, error) {
 	if f, err := os.Open(file); os.IsNotExist(err) {
 		return nil, err
 	} else if err != nil {
-		return nil, fmt.Errorf("cannot read template from %s: %v", file, err)
+		return nil, fmt.Errorf("cannot read template from %s: %w", file, err)
 	} else {
 		//noinspection GoUnhandledErrorResult
 		defer f.Close()
 		if content, err := ioutil.ReadAll(f); err != nil {
-			return nil, fmt.Errorf("cannot read template from %s: %v", file, err)
+			return nil, fmt.Errorf("cannot read template from %s: %w", file, err)
 		} else {
 			return instance.new(file, &file, string(content))
 		}

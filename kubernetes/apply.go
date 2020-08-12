@@ -130,7 +130,7 @@ func (instance *ApplyObject) Execute(scope string, dryRunOn model.DryRunOn) (err
 			WithDeepFieldOn("response", original, l.IsDebugEnabled).
 			Debug("%v does exist - it will be updated.", instance.object)
 
-		if err := transformation.TransformForUpdate(instance.project, *original, instance.object.Object); err != nil {
+		if err := transformation.Default.TransformForUpdate(instance.project, *original, instance.object.Object); err != nil {
 			return err
 		}
 
@@ -609,7 +609,7 @@ func (instance ApplySet) Execute(scope string, dryRunOn model.DryRunOn) (err err
 	}()
 	for _, child := range instance {
 		if err = child.Execute(scope, dryRunOn); err != nil {
-			err = fmt.Errorf("cannot apply %v: %v", child, err)
+			err = fmt.Errorf("cannot apply %v: %w", child, err)
 			return
 		}
 	}
@@ -638,7 +638,7 @@ func (instance ApplySet) Wait(scope string, wu model.WaitUntil) (relevantDuratio
 			cWu = wu.CopyWithTimeout(&cTimeout)
 		}
 		if cRelevantDuration, cErr := child.Wait(scope, cWu); cErr != nil {
-			return 0, fmt.Errorf("cannot wait for %v: %v", child, cErr)
+			return 0, fmt.Errorf("cannot wait for %v: %w", child, cErr)
 		} else {
 			relevantDuration += cRelevantDuration
 		}

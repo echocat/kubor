@@ -1,11 +1,9 @@
 package kubernetes
 
 import (
-	"github.com/echocat/kubor/common"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
-	"reflect"
 	"strings"
 )
 
@@ -24,10 +22,10 @@ func StateOf(object runtime.Object) *State {
 }
 
 type Aggregation interface {
-	Desired() *int32
-	Ready() *int32
-	UpToDate() *int32
-	Available() *int32
+	Desired() *int64
+	Ready() *int64
+	UpToDate() *int64
+	Available() *int64
 	IsReady() *bool
 	State() *State
 }
@@ -52,19 +50,19 @@ type AnonymousAggregation struct {
 	*unstructured.Unstructured
 }
 
-func (instance AnonymousAggregation) Desired() *int32 {
+func (instance AnonymousAggregation) Desired() *int64 {
 	return nil
 }
 
-func (instance AnonymousAggregation) Ready() *int32 {
+func (instance AnonymousAggregation) Ready() *int64 {
 	return nil
 }
 
-func (instance AnonymousAggregation) UpToDate() *int32 {
+func (instance AnonymousAggregation) UpToDate() *int64 {
 	return nil
 }
 
-func (instance AnonymousAggregation) Available() *int32 {
+func (instance AnonymousAggregation) Available() *int64 {
 	return nil
 }
 
@@ -80,20 +78,36 @@ type DeploymentAggregation struct {
 	AnonymousAggregation
 }
 
-func (instance DeploymentAggregation) Desired() *int32 {
-	return TryCastToInt32(common.GetObjectPathValue(instance.Object, "status", "replicas"))
+func (instance DeploymentAggregation) Desired() *int64 {
+	if v, ok, err := unstructured.NestedInt64(instance.Object, "status", "replicas"); err != nil || !ok {
+		return nil
+	} else {
+		return &v
+	}
 }
 
-func (instance DeploymentAggregation) Ready() *int32 {
-	return TryCastToInt32(common.GetObjectPathValue(instance.Object, "status", "readyReplicas"))
+func (instance DeploymentAggregation) Ready() *int64 {
+	if v, ok, err := unstructured.NestedInt64(instance.Object, "status", "readyReplicas"); err != nil || !ok {
+		return nil
+	} else {
+		return &v
+	}
 }
 
-func (instance DeploymentAggregation) UpToDate() *int32 {
-	return TryCastToInt32(common.GetObjectPathValue(instance.Object, "status", "updatedReplicas"))
+func (instance DeploymentAggregation) UpToDate() *int64 {
+	if v, ok, err := unstructured.NestedInt64(instance.Object, "status", "updatedReplicas"); err != nil || !ok {
+		return nil
+	} else {
+		return &v
+	}
 }
 
-func (instance DeploymentAggregation) Available() *int32 {
-	return TryCastToInt32(common.GetObjectPathValue(instance.Object, "status", "availableReplicas"))
+func (instance DeploymentAggregation) Available() *int64 {
+	if v, ok, err := unstructured.NestedInt64(instance.Object, "status", "availableReplicas"); err != nil || !ok {
+		return nil
+	} else {
+		return &v
+	}
 }
 
 func (instance DeploymentAggregation) IsReady() *bool {
@@ -110,20 +124,36 @@ type DaemonSetAggregation struct {
 	AnonymousAggregation
 }
 
-func (instance DaemonSetAggregation) Desired() *int32 {
-	return TryCastToInt32(common.GetObjectPathValue(instance.Object, "status", "desiredNumberScheduled"))
+func (instance DaemonSetAggregation) Desired() *int64 {
+	if v, ok, err := unstructured.NestedInt64(instance.Object, "status", "desiredNumberScheduled"); err != nil || !ok {
+		return nil
+	} else {
+		return &v
+	}
 }
 
-func (instance DaemonSetAggregation) Ready() *int32 {
-	return TryCastToInt32(common.GetObjectPathValue(instance.Object, "status", "numberReady"))
+func (instance DaemonSetAggregation) Ready() *int64 {
+	if v, ok, err := unstructured.NestedInt64(instance.Object, "status", "numberReady"); err != nil || !ok {
+		return nil
+	} else {
+		return &v
+	}
 }
 
-func (instance DaemonSetAggregation) UpToDate() *int32 {
-	return TryCastToInt32(common.GetObjectPathValue(instance.Object, "status", "updatedNumberScheduled"))
+func (instance DaemonSetAggregation) UpToDate() *int64 {
+	if v, ok, err := unstructured.NestedInt64(instance.Object, "status", "updatedNumberScheduled"); err != nil || !ok {
+		return nil
+	} else {
+		return &v
+	}
 }
 
-func (instance DaemonSetAggregation) Available() *int32 {
-	return TryCastToInt32(common.GetObjectPathValue(instance.Object, "status", "numberAvailable"))
+func (instance DaemonSetAggregation) Available() *int64 {
+	if v, ok, err := unstructured.NestedInt64(instance.Object, "status", "numberAvailable"); err != nil || !ok {
+		return nil
+	} else {
+		return &v
+	}
 }
 
 func (instance DaemonSetAggregation) IsReady() *bool {
@@ -140,19 +170,31 @@ type StatefulSetAggregation struct {
 	AnonymousAggregation
 }
 
-func (instance StatefulSetAggregation) Desired() *int32 {
-	return TryCastToInt32(common.GetObjectPathValue(instance.Object, "status", "replicas"))
+func (instance StatefulSetAggregation) Desired() *int64 {
+	if v, ok, err := unstructured.NestedInt64(instance.Object, "status", "replicas"); err != nil || !ok {
+		return nil
+	} else {
+		return &v
+	}
 }
 
-func (instance StatefulSetAggregation) Ready() *int32 {
-	return TryCastToInt32(common.GetObjectPathValue(instance.Object, "status", "readyReplicas"))
+func (instance StatefulSetAggregation) Ready() *int64 {
+	if v, ok, err := unstructured.NestedInt64(instance.Object, "status", "readyReplicas"); err != nil || !ok {
+		return nil
+	} else {
+		return &v
+	}
 }
 
-func (instance StatefulSetAggregation) UpToDate() *int32 {
-	return TryCastToInt32(common.GetObjectPathValue(instance.Object, "status", "updatedReplicas"))
+func (instance StatefulSetAggregation) UpToDate() *int64 {
+	if v, ok, err := unstructured.NestedInt64(instance.Object, "status", "updatedReplicas"); err != nil || !ok {
+		return nil
+	} else {
+		return &v
+	}
 }
 
-func (instance StatefulSetAggregation) Available() *int32 {
+func (instance StatefulSetAggregation) Available() *int64 {
 	return nil
 }
 
@@ -170,50 +212,36 @@ type PodAggregation struct {
 	AnonymousAggregation
 }
 
-func (instance PodAggregation) Desired() *int32 {
-	statuses := common.GetObjectPathValue(instance.Object, "status", "containerStatuses")
-	if statuses == nil {
+func (instance PodAggregation) Desired() *int64 {
+	statuses, ok, err := unstructured.NestedSlice(instance.Object, "status", "containerStatuses")
+	if err != nil || !ok || len(statuses) == 0 {
 		return nil
 	}
-	vStatuses := common.SimplifyValue(reflect.ValueOf(statuses))
-	if vStatuses.Kind() != reflect.Slice {
-		return nil
-	}
-	return Pint32(int32(vStatuses.Len()))
+	l := int64(len(statuses))
+	return &l
 }
 
-func (instance PodAggregation) Ready() *int32 {
-	statuses := common.GetObjectPathValue(instance.Object, "status", "containerStatuses")
-	if statuses == nil {
+func (instance PodAggregation) Ready() *int64 {
+	statuses, ok, err := unstructured.NestedSlice(instance.Object, "status", "containerStatuses")
+	if err != nil || !ok || len(statuses) == 0 {
 		return nil
 	}
-	vStatuses := common.SimplifyValue(reflect.ValueOf(statuses))
-	if vStatuses.Kind() != reflect.Slice {
-		return nil
-	}
-	var ready int32
-	numberOfContainers := vStatuses.Len()
-	for i := 0; i < numberOfContainers; i++ {
-		readyValue := common.GetObjectPathValue(vStatuses.Index(i).Interface(), "ready")
-		switch v := readyValue.(type) {
-		case *bool:
-			if *v {
-				ready++
-			}
-		case bool:
-			if v {
+	var ready int64
+	for _, candidate := range statuses {
+		if candidate, ok := candidate.(map[string]interface{}); ok {
+			if v, ok, err := unstructured.NestedBool(candidate, "ready"); err == nil && ok && v {
 				ready++
 			}
 		}
 	}
-	return Pint32(ready)
+	return &ready
 }
 
-func (instance PodAggregation) UpToDate() *int32 {
+func (instance PodAggregation) UpToDate() *int64 {
 	return nil
 }
 
-func (instance PodAggregation) Available() *int32 {
+func (instance PodAggregation) Available() *int64 {
 	return nil
 }
 

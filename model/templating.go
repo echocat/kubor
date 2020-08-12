@@ -13,7 +13,7 @@ type Templating struct {
 	TemplateFilePattern []string `yaml:"templateFilePattern" json:"templateFilePattern"`
 }
 
-func newTemplating() Templating {
+func NewTemplating() Templating {
 	return Templating{
 		TemplateFilePattern: []string{
 			"?{{ .Root }}/kubernetes/templates/*.yml",
@@ -48,9 +48,9 @@ func (instance Templating) RenderedTemplatesProvider(data interface{}) (ContentP
 
 func (instance Templating) RenderTemplateFile(file string, data interface{}, writer io.Writer) error {
 	if tmpl, err := functions.DefaultTemplateFactory().NewFromFile(file); err != nil {
-		return fmt.Errorf("cannot parse template file '%s': %v", file, err)
+		return fmt.Errorf("cannot parse template file '%s': %w", file, err)
 	} else if err := tmpl.Execute(data, writer); err != nil {
-		return fmt.Errorf("cannot render template file '%s': %v", file, err)
+		return fmt.Errorf("cannot render template file '%s': %w", file, err)
 	} else {
 		return nil
 	}
@@ -65,13 +65,13 @@ func (instance Templating) renderFiles(patterns []string, name string, data inte
 			atLeastOneMatchExpected = false
 		}
 		if tmpl, err := functions.DefaultTemplateFactory().New(pattern, pattern); err != nil {
-			return nil, fmt.Errorf("cannot handle %s pattern '%s': %v", name, pattern, err)
+			return nil, fmt.Errorf("cannot handle %s pattern '%s': %w", name, pattern, err)
 		} else if rendered, err := tmpl.ExecuteToString(data); err != nil {
-			return nil, fmt.Errorf("cannot handle %s pattern: %v", name, err)
+			return nil, fmt.Errorf("cannot handle %s pattern: %w", name, err)
 		} else if rendered == "" {
 			// Ignore ... could happen if we use {{ if }} clauses
 		} else if matches, err := filepath.Glob(rendered); err != nil {
-			return nil, fmt.Errorf("cannot handle %s pattern '%s' => '%s': %v", name, pattern, rendered, err)
+			return nil, fmt.Errorf("cannot handle %s pattern '%s' => '%s': %w", name, pattern, rendered, err)
 		} else {
 			if len(matches) <= 0 && atLeastOneMatchExpected {
 				return nil, fmt.Errorf("there does not at least one %s file exist that matches '%s' => '%s'", name, pattern, rendered)

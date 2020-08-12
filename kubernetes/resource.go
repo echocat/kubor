@@ -42,7 +42,7 @@ func (instance ObjectResource) Clone() ObjectResource {
 
 func (instance ObjectResource) CloneForCreate(project *model.Project) (ObjectResource, error) {
 	result := instance.Clone()
-	if err := transformation.TransformForCreate(project, result.Object); err != nil {
+	if err := transformation.Default.TransformForCreate(project, result.Object); err != nil {
 		return ObjectResource{}, err
 	}
 	return result, nil
@@ -50,7 +50,7 @@ func (instance ObjectResource) CloneForCreate(project *model.Project) (ObjectRes
 
 func (instance ObjectResource) CloneForUpdate(project *model.Project, original unstructured.Unstructured) (ObjectResource, error) {
 	result := instance.Clone()
-	if err := transformation.TransformForUpdate(project, original, result.Object); err != nil {
+	if err := transformation.Default.TransformForUpdate(project, original, result.Object); err != nil {
 		return ObjectResource{}, err
 	}
 	return result, nil

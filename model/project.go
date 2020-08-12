@@ -31,14 +31,14 @@ type Project struct {
 	Context string            `yaml:"-" json:"-"`
 }
 
-func newProject() *Project {
-	return &Project{
-		Claim:             newClaim(),
-		Templating:        newTemplating(),
-		ConditionalValues: []ConditionalValues{},
-		Values:            Values{},
-		Labels:            newLabels(),
-		Annotations:       newAnnotations(),
+func NewProject() Project {
+	return Project{
+		Claim:             NewClaim(),
+		Templating:        NewTemplating(),
+		ConditionalValues: NewConditionalValuesSlice(),
+		Values:            NewValues(),
+		Labels:            NewLabels(),
+		Annotations:       NewAnnotations(),
 	}
 }
 
@@ -52,15 +52,15 @@ func (instance Project) Validate() error {
 func (instance *Project) Save() error {
 	dir := filepath.Dir(instance.Source)
 	if err := os.MkdirAll(dir, 0755); err != nil {
-		return fmt.Errorf("cannot create parent directory for source file '%s': %v", instance.Source, err)
+		return fmt.Errorf("cannot create parent directory for source file '%s': %w", instance.Source, err)
 	} else if f, err := os.OpenFile(instance.Source, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0644); err != nil {
-		return fmt.Errorf("cannot save source file '%s': %v", instance.Source, err)
+		return fmt.Errorf("cannot save source file '%s': %w", instance.Source, err)
 	} else {
 		//noinspection GoUnhandledErrorResult
 		defer f.Close()
 		encoder := yaml.NewEncoder(f)
 		if err := encoder.Encode(instance); err != nil {
-			return fmt.Errorf("cannot save source file '%s': %v", instance.Source, err)
+			return fmt.Errorf("cannot save source file '%s': %w", instance.Source, err)
 		}
 		return nil
 	}
@@ -88,7 +88,7 @@ func NewProjectFactory() *ProjectFactory {
 }
 
 func (instance *ProjectFactory) Create(context string) (*Project, error) {
-	result := newProject()
+	result := NewProject()
 	result.Context = context
 
 	if source, err := instance.resolveSource(); os.IsNotExist(err) {
@@ -96,16 +96,16 @@ func (instance *ProjectFactory) Create(context string) (*Project, error) {
 			return nil, fmt.Errorf("could not find source file '%s'", instance.source)
 		}
 	} else if err != nil {
-		return nil, fmt.Errorf("cannot open source file '%s': %v", instance.source, err)
+		return nil, fmt.Errorf("cannot open source file '%s': %w", instance.source, err)
 	} else if f, err := os.Open(source); err != nil {
-		return nil, fmt.Errorf("cannot open source file '%s': %v", source, err)
+		return nil, fmt.Errorf("cannot open source file '%s': %w", source, err)
 	} else {
 		//noinspection GoUnhandledErrorResult
 		defer f.Close()
 		if err := yaml.NewDecoder(f).Decode(&result); err != nil {
-			return nil, fmt.Errorf("cannot read source file '%s': %v", source, err)
+			return nil, fmt.Errorf("cannot read source file '%s': %w", source, err)
 		} else if err := result.Validate(); err != nil {
-			return nil, fmt.Errorf("cannot read source file '%s': %v", source, err)
+			return nil, fmt.Errorf("cannot read source file '%s': %w", source, err)
 		}
 
 		if result, err = instance.populateStage1(source, result); err != nil {
@@ -141,7 +141,7 @@ func (instance *ProjectFactory) Create(context string) (*Project, error) {
 		l.Debug("Project %s", name)
 	}
 
-	return result, nil
+	return &result, nil
 }
 
 func (instance *ProjectFactory) resolveSource() (string, error) {
@@ -175,8 +175,8 @@ func (instance *ProjectFactory) resolveSource() (string, error) {
 	}
 }
 
-func (instance *ProjectFactory) populateStage1(source string, input *Project) (*Project, error) {
-	result := *input
+func (instance *ProjectFactory) populateStage1(source string, input Project) (Project, error) {
+	result := input
 	result.Source = source
 	result.Root = filepath.Dir(result.Source)
 	result.Values = Values{}
@@ -196,30 +196,30 @@ func (instance *ProjectFactory) populateStage1(source string, input *Project) (*
 		result.Release = "latest"
 	}
 	result.Env = common.Environ()
-	return &result, nil
+	return result, nil
 }
 
-func (instance *ProjectFactory) populateStage2(input *Project) (*Project, error) {
-	result := *input
+func (instance *ProjectFactory) populateStage2(input Project) (Project, error) {
+	result := input
 	for _, candidate := range input.ConditionalValues {
 		if ok, err := candidate.On.Matches(result); err != nil {
-			return nil, err
+			return Project{}, err
 		} else if ok {
 			result.Values = result.Values.MergeWith(candidate.Values)
 			result.Values = result.Values.MergeWith(instance.values)
 		}
 	}
-	return &result, nil
+	return result, nil
 }
 
-func (instance *ProjectFactory) populateStage3(input *Project) (*Project, error) {
-	result := *input
+func (instance *ProjectFactory) populateStage3(input Project) (Project, error) {
+	result := input
 	c, err := input.Claim.evaluate(input)
 	if err != nil {
-		return nil, err
+		return Project{}, err
 	}
 	result.Claim = c
-	return &result, nil
+	return result, nil
 }
 
 func (instance *ProjectFactory) ConfigureFlags(hf common.HasFlags) {

@@ -3,18 +3,20 @@ package model
 import (
 	"errors"
 	"fmt"
+	"strings"
 )
 
 const (
 	ApplyOnAlways = ApplyOn("always")
 	ApplyOnCreate = ApplyOn("create")
 	ApplyOnUpdate = ApplyOn("update")
+	ApplyOnNever  = ApplyOn("never")
 )
 
 var (
 	ErrIllegalApplyOn = errors.New("illegal apply-on")
 
-	validApplyOnValues = map[ApplyOn]bool{ApplyOnAlways: true, ApplyOnCreate: true, ApplyOnUpdate: true}
+	validApplyOnValues = map[ApplyOn]bool{ApplyOnAlways: true, ApplyOnCreate: true, ApplyOnUpdate: true, ApplyOnNever: true}
 )
 
 type ApplyOn string
@@ -56,6 +58,15 @@ func (instance ApplyOn) OnCreate() bool {
 }
 
 func (instance *ApplyOn) UnmarshalText(text []byte) error {
+	switch strings.ToLower(string(text)) {
+	case "true", "enabled", "on":
+		*instance = ApplyOnAlways
+		return nil
+	case "false", "disabled", "off":
+		*instance = ApplyOnAlways
+		return nil
+	}
+
 	if exist := validApplyOnValues[ApplyOn(text)]; !exist {
 		return fmt.Errorf("%w: %s", ErrIllegalApplyOn, string(text))
 	}

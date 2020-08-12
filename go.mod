@@ -7,7 +7,6 @@ require (
 	github.com/googleapis/gnostic v0.4.0
 	github.com/huandu/xstrings v1.2.0
 	github.com/imdario/mergo v0.3.8
-	github.com/onsi/gomega v1.7.0
 	github.com/sirupsen/logrus v1.4.2
 	github.com/stretchr/testify v1.4.0
 	gopkg.in/yaml.v2 v2.2.8
@@ -17,4 +16,4 @@ require (
 	k8s.io/client-go v0.17.2
 )
 
-go 1.13
+go 1.14

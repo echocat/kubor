@@ -49,7 +49,7 @@ func (instance *ObjectHandler) Handle(cp ContentProvider) error {
 	if se, ok := err.(*errors.StatusError); ok {
 		return se
 	}
-	return fmt.Errorf("cannot handle '%s': %v", name, err)
+	return fmt.Errorf("cannot handle '%s': %w", name, err)
 }
 
 func (instance *ObjectHandler) handleContent(source string, content []byte) error {
@@ -67,18 +67,18 @@ func (instance *ObjectHandler) handleContent(source string, content []byte) erro
 			fSource := fmt.Sprintf("%s#%d", source, i)
 			if object, _, err := instance.Deserializer.Decode([]byte(part), nil, nil); runtime.IsNotRegisteredError(err) {
 				if unstr, nErr := instance.decodeUnstructured([]byte(part)); nErr != nil {
-					return fmt.Errorf("%s: %v", fSource, err)
+					return fmt.Errorf("%s: %w", fSource, err)
 				} else if !instance.Project.Scheme.IsIgnored(GroupVersionKind(unstr.GroupVersionKind())) {
-					return fmt.Errorf("%s: %v", fSource, err)
+					return fmt.Errorf("%s: %w", fSource, err)
 				} else if err := instance.OnObject(fSource, unstr, unstr); err != nil {
-					return fmt.Errorf("%s: %v", fSource, err)
+					return fmt.Errorf("%s: %w", fSource, err)
 				}
 			} else if err != nil {
-				return fmt.Errorf("%s: %v", fSource, err)
+				return fmt.Errorf("%s: %w", fSource, err)
 			} else if unstr, err := instance.decodeUnstructured([]byte(part)); err != nil {
-				return fmt.Errorf("%s: %v", fSource, err)
+				return fmt.Errorf("%s: %w", fSource, err)
 			} else if err := instance.OnObject(fSource, object, unstr); err != nil {
-				return fmt.Errorf("%s: %v", fSource, err)
+				return fmt.Errorf("%s: %w", fSource, err)
 			}
 		}
 	}

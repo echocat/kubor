@@ -8,6 +8,10 @@ import (
 
 type Values map[string]interface{}
 
+func NewValues() Values {
+	return Values{}
+}
+
 func (instance Values) MergeWith(input ...Values) Values {
 	result := Values{}
 	if instance != nil {
@@ -53,4 +57,8 @@ func (instance *Values) Get() interface{} {
 type ConditionalValues struct {
 	On     common.EvaluatingPredicate `yaml:"on,omitempty" json:"on,omitempty"`
 	Values Values                     `yaml:",inline" json:",inline"`
+}
+
+func NewConditionalValuesSlice() []ConditionalValues {
+	return []ConditionalValues{}
 }

@@ -139,7 +139,7 @@ func ParseEvaluatingPartMatcher(plain string) (EvaluatingPartMatcher, error) {
 	if len(parts) != 2 {
 		return EvaluatingPartMatcher{}, fmt.Errorf("illegal matching pattern '%s': '=' missing", plain)
 	} else if matcher, err := NewEvaluatingPartMatcher(parts[0], parts[1]); err != nil {
-		return EvaluatingPartMatcher{}, fmt.Errorf("illegal matching pattern '%s': %v", plain, err)
+		return EvaluatingPartMatcher{}, fmt.Errorf("illegal matching pattern '%s': %w", plain, err)
 	} else {
 		return matcher, nil
 	}

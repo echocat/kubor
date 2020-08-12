@@ -3,17 +3,25 @@ package transformation
 import (
 	"github.com/echocat/kubor/model"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"strings"
 )
 
+const kuborAnnotationsTransformationName = Name("apply-annotations")
+
 func init() {
-	RegisterUpdateTransformationFunc(func(project *model.Project, _ unstructured.Unstructured, target *unstructured.Unstructured) error {
-		return ensureKuborAnnotations(project, target)
-	})
-	RegisterCreateTransformationFunc(ensureKuborAnnotations)
+	Default.RegisterUpdateFunc(kuborAnnotationsTransformationName, ensureKuborAnnotationsOnUpdate)
+	Default.RegisterCreateFunc(kuborAnnotationsTransformationName, ensureKuborAnnotations)
 }
 
-func ensureKuborAnnotations(project *model.Project, target *unstructured.Unstructured) error {
+func ensureKuborAnnotationsOnUpdate(project *model.Project, _ unstructured.Unstructured, target *unstructured.Unstructured, argument string) error {
+	return ensureKuborAnnotations(project, target, argument)
+}
+
+func ensureKuborAnnotations(project *model.Project, target *unstructured.Unstructured, _ string) error {
 	if err := ensureKuborAnnotationsOfPath(project, target, "metadata", "annotations"); err != nil {
+		return err
+	}
+	if _, specTemplateExists, err := unstructured.NestedMap(target.Object, "spec", "template"); err != nil || !specTemplateExists {
 		return err
 	}
 	if err := ensureKuborAnnotationsOfPath(project, target, "spec", "template", "metadata", "annotations"); err != nil {
@@ -37,6 +45,7 @@ func ensureKuborAnnotationsOfPath(project *model.Project, target *unstructured.U
 	ensureKuborAnnotation(&annotations, pa.DryRunOn)
 	ensureKuborAnnotation(&annotations, pa.WaitUntil)
 	ensureKuborAnnotation(&annotations, pa.CleanupOn)
+	ensureKuborPrefixedAnnotations(&annotations, pa.Transformations)
 
 	return unstructured.SetNestedStringMap(target.Object, annotations, fields...)
 }
@@ -44,6 +53,21 @@ func ensureKuborAnnotationsOfPath(project *model.Project, target *unstructured.U
 func ensureKuborAnnotation(annotations *map[string]string, annotation model.Annotation) {
 	switch annotation.Action {
 	case model.AnnotationActionDrop:
-		delete(*annotations, annotation.Name.String())
+		delete(*annotations, string(annotation.Name))
+	}
+}
+
+func ensureKuborPrefixedAnnotations(annotations *map[string]string, annotation model.Annotation) {
+	toHandle := map[string]bool{}
+	for name := range *annotations {
+		if strings.HasPrefix(name, string(annotation.Name)) {
+			toHandle[name] = true
+		}
+	}
+	for name := range toHandle {
+		switch annotation.Action {
+		case model.AnnotationActionDrop:
+			delete(*annotations, name)
+		}
 	}
 }

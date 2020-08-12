@@ -1,30 +1,36 @@
 package model
 
-import "k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+import (
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"strings"
+)
 
 const (
-	AnnotationStage     = "kubor.echocat.org/stage"
-	AnnotationApplyOn   = "kubor.echocat.org/apply-on"
-	AnnotationDryRunOn  = "kubor.echocat.org/dry-run-on"
-	AnnotationWaitUntil = "kubor.echocat.org/wait-until"
-	AnnotationCleanupOn = "kubor.echocat.org/cleanup-on"
+	AnnotationStage                = "kubor.echocat.org/stage"
+	AnnotationApplyOn              = "kubor.echocat.org/apply-on"
+	AnnotationDryRunOn             = "kubor.echocat.org/dry-run-on"
+	AnnotationWaitUntil            = "kubor.echocat.org/wait-until"
+	AnnotationCleanupOn            = "kubor.echocat.org/cleanup-on"
+	AnnotationTransformationPrefix = "kubor.echocat.org/transformation-"
 )
 
 type Annotations struct {
-	Stage     Annotation `yaml:"stage,omitempty" json:"stage,omitempty"`
-	ApplyOn   Annotation `yaml:"applyOn,omitempty" json:"applyOn,omitempty"`
-	DryRunOn  Annotation `yaml:"dryRunOn,omitempty" json:"dryRunOn,omitempty"`
-	WaitUntil Annotation `yaml:"waitUntil,omitempty" json:"waitUntil,omitempty"`
-	CleanupOn Annotation `yaml:"cleanupOn,omitempty" json:"cleanupOn,omitempty"`
+	Stage           Annotation `yaml:"stage,omitempty" json:"stage,omitempty"`
+	ApplyOn         Annotation `yaml:"applyOn,omitempty" json:"applyOn,omitempty"`
+	DryRunOn        Annotation `yaml:"dryRunOn,omitempty" json:"dryRunOn,omitempty"`
+	WaitUntil       Annotation `yaml:"waitUntil,omitempty" json:"waitUntil,omitempty"`
+	CleanupOn       Annotation `yaml:"cleanupOn,omitempty" json:"cleanupOn,omitempty"`
+	Transformations Annotation `yaml:"transformations,omitempty" json:"transformations,omitempty"`
 }
 
-func newAnnotations() Annotations {
+func NewAnnotations() Annotations {
 	return Annotations{
-		Stage:     Annotation{AnnotationStage, AnnotationActionDrop},
-		ApplyOn:   Annotation{AnnotationApplyOn, AnnotationActionDrop},
-		DryRunOn:  Annotation{AnnotationDryRunOn, AnnotationActionDrop},
-		WaitUntil: Annotation{AnnotationWaitUntil, AnnotationActionDrop},
-		CleanupOn: Annotation{AnnotationCleanupOn, AnnotationActionLeave},
+		Stage:           Annotation{AnnotationStage, AnnotationActionDrop},
+		ApplyOn:         Annotation{AnnotationApplyOn, AnnotationActionDrop},
+		DryRunOn:        Annotation{AnnotationDryRunOn, AnnotationActionDrop},
+		WaitUntil:       Annotation{AnnotationWaitUntil, AnnotationActionDrop},
+		CleanupOn:       Annotation{AnnotationCleanupOn, AnnotationActionLeave},
+		Transformations: Annotation{AnnotationTransformationPrefix, AnnotationActionDrop},
 	}
 }
 
@@ -76,4 +82,21 @@ func (instance Annotations) GetCleanupOn(v *unstructured.Unstructured) (CleanupO
 	}
 	var result CleanupOn
 	return result, result.Set(plain)
+}
+
+func (instance Annotations) GetTransformationState(v *unstructured.Unstructured, nameSuffix string, enabledDefault bool) (enabled bool, argument string, err error) {
+	as := v.GetAnnotations()
+	plain := as[string(instance.Transformations.Name)+nameSuffix]
+	if plain == "" {
+		return enabledDefault, "", nil
+	}
+	plain = strings.TrimSpace(plain)
+	switch strings.ToLower(plain) {
+	case "enabled", "true", "on":
+		return true, "", nil
+	case "disabled", "false", "off":
+		return false, "", nil
+	default:
+		return true, plain, nil
+	}
 }

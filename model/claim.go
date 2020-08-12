@@ -17,7 +17,7 @@ var (
 	DefaultClaimedGroupVersionKinds = DefaultGroupVersionKindRegistry.AsGroupVersionKinds()
 )
 
-func newClaim() Claim {
+func NewClaim() Claim {
 	return Claim{
 		GroupVersionKinds: DefaultClaimedGroupVersionKinds,
 		SourceNamespaces:  []string{"{{.GroupId}}"},

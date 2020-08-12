@@ -21,7 +21,7 @@ var FuncDecodeYaml = Function{
 	reader := strings.NewReader(source)
 	var result interface{}
 	if err := yaml.NewDecoder(reader).Decode(&result); err != nil {
-		return nil, fmt.Errorf("cannot decode yaml referenced in '%s': %v", context.GetTemplate().GetSource(), err)
+		return nil, fmt.Errorf("cannot decode yaml referenced in '%s': %w", context.GetTemplate().GetSource(), err)
 	} else {
 		return result, nil
 	}
@@ -39,7 +39,7 @@ var FuncDecodeJson = Function{
 	reader := strings.NewReader(source)
 	var result interface{}
 	if err := json.NewDecoder(reader).Decode(&result); err != nil {
-		return nil, fmt.Errorf("cannot decode json referenced in '%s': %v", context.GetTemplate().GetSource(), err)
+		return nil, fmt.Errorf("cannot decode json referenced in '%s': %w", context.GetTemplate().GetSource(), err)
 	} else {
 		return result, nil
 	}
@@ -63,7 +63,7 @@ var FuncDecodeYamlFromFile = Function{
 		defer f.Close()
 		var result interface{}
 		if err := yaml.NewDecoder(f).Decode(&result); err != nil {
-			return nil, fmt.Errorf("cannot decode yaml from '%s' referenced in '%s': %v", resolved, context.GetTemplate().GetSource(), err)
+			return nil, fmt.Errorf("cannot decode yaml from '%s' referenced in '%s': %w", resolved, context.GetTemplate().GetSource(), err)
 		} else {
 			return result, nil
 		}
@@ -88,7 +88,7 @@ var FuncDecodeJsonFromFile = Function{
 		defer f.Close()
 		var result interface{}
 		if err := json.NewDecoder(f).Decode(&result); err != nil {
-			return nil, fmt.Errorf("cannot decode yaml from '%s' referenced in '%s': %v", resolved, context.GetTemplate().GetSource(), err)
+			return nil, fmt.Errorf("cannot decode yaml from '%s' referenced in '%s': %w", resolved, context.GetTemplate().GetSource(), err)
 		} else {
 			return result, nil
 		}

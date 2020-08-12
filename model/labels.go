@@ -12,7 +12,7 @@ type Labels struct {
 	Release    Label `yaml:"release,omitempty" json:"release,omitempty"`
 }
 
-func newLabels() Labels {
+func NewLabels() Labels {
 	return Labels{
 		GroupId:    Label{LabelGroupId, LabelActionSetIfAbsent},
 		ArtifactId: Label{LabelArtifactId, LabelActionSetIfAbsent},

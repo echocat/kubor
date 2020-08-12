@@ -7,13 +7,13 @@ import (
 )
 
 func init() {
-	RegisterUpdateTransformationFunc(func(project *model.Project, _ unstructured.Unstructured, target *unstructured.Unstructured) error {
-		return ensureKuborLabels(project, target)
+	Default.RegisterUpdateFunc("apply-labels", func(project *model.Project, _ unstructured.Unstructured, target *unstructured.Unstructured, argument string) error {
+		return ensureKuborLabels(project, target, argument)
 	})
-	RegisterCreateTransformationFunc(ensureKuborLabels)
+	Default.RegisterCreateFunc("apply-labels", ensureKuborLabels)
 }
 
-func ensureKuborLabels(project *model.Project, target *unstructured.Unstructured) error {
+func ensureKuborLabels(project *model.Project, target *unstructured.Unstructured, _ string) error {
 	if err := ensureKuborLabelsOfPath(project, target, "metadata", "labels"); err != nil {
 		return err
 	}

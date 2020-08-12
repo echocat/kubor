@@ -1,15 +1,13 @@
 package transformation
 
 import (
-	. "github.com/onsi/gomega"
+	"github.com/stretchr/testify/assert"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"testing"
 )
 
-func Test_fixIfResourceVersionIsAbsent_ignores_different_GroupVersionKinds(t *testing.T) {
-	g := NewGomegaWithT(t)
-
-	original := unstructured.Unstructured{
+func Test_preserveResourceVersion_ignores_different_GroupVersionKinds(t *testing.T) {
+	existing := unstructured.Unstructured{
 		Object: map[string]interface{}{
 			"apiVersion": "apps/v1",
 			"kind":       "Service",
@@ -22,47 +20,44 @@ func Test_fixIfResourceVersionIsAbsent_ignores_different_GroupVersionKinds(t *te
 		},
 	}
 	target := expectedTarget
-	err := fixIfResourceVersionIsAbsent(nil, original, &target)
-	g.Expect(err).To(BeNil())
-	g.Expect(target).To(Equal(expectedTarget))
+
+	err := preserveResourceVersion(nil, existing, &target, "")
+	assert.NoError(t, err)
+	assert.Equal(t, expectedTarget, target)
 }
 
-func Test_fixIfResourceVersionIsAbsent_ignores_on_non_Service_kind(t *testing.T) {
-	g := NewGomegaWithT(t)
-
-	original := unstructured.Unstructured{
+func Test_preserveResourceVersion_ignores_on_non_Service_kind(t *testing.T) {
+	existing := unstructured.Unstructured{
 		Object: map[string]interface{}{
 			"apiVersion": "v1",
 			"kind":       "Servicex",
 		},
 	}
-	expectedTarget := original
-	target := original
-	err := fixIfResourceVersionIsAbsent(nil, original, &target)
-	g.Expect(err).To(BeNil())
-	g.Expect(target).To(Equal(expectedTarget))
+	expectedTarget := existing
+	target := existing
+
+	err := preserveResourceVersion(nil, existing, &target, "")
+	assert.NoError(t, err)
+	assert.Equal(t, expectedTarget, target)
 }
 
-func Test_fixIfResourceVersionIsAbsent_ignores_on_non_v1_version(t *testing.T) {
-	g := NewGomegaWithT(t)
-
-	original := unstructured.Unstructured{
+func Test_preserveResourceVersion_ignores_on_non_v1_version(t *testing.T) {
+	existing := unstructured.Unstructured{
 		Object: map[string]interface{}{
 			"apiVersion": "v1x",
 			"kind":       "Service",
 		},
 	}
-	expectedTarget := original
-	target := original
-	err := fixIfResourceVersionIsAbsent(nil, original, &target)
-	g.Expect(err).To(BeNil())
-	g.Expect(target).To(Equal(expectedTarget))
+	expectedTarget := existing
+	target := existing
+
+	err := preserveResourceVersion(nil, existing, &target, "")
+	assert.NoError(t, err)
+	assert.Equal(t, expectedTarget, target)
 }
 
-func Test_fixIfResourceVersionIsAbsent_ignores_if_original_has_no_resourceVersion(t *testing.T) {
-	g := NewGomegaWithT(t)
-
-	original := unstructured.Unstructured{
+func Test_preserveResourceVersion_ignores_if_original_has_no_resourceVersion(t *testing.T) {
+	existing := unstructured.Unstructured{
 		Object: map[string]interface{}{
 			"apiVersion": "v1",
 			"kind":       "Service",
@@ -83,15 +78,14 @@ func Test_fixIfResourceVersionIsAbsent_ignores_if_original_has_no_resourceVersio
 			"kind":       "Service",
 		},
 	}
-	err := fixIfResourceVersionIsAbsent(nil, original, &target)
-	g.Expect(err).To(BeNil())
-	g.Expect(expectedTarget).To(Equal(target))
+
+	err := preserveResourceVersion(nil, existing, &target, "")
+	assert.NoError(t, err)
+	assert.Equal(t, expectedTarget, target)
 }
 
-func Test_fixIfResourceVersionIsAbsent_ignores_if_original_resourceVersion_is_not_a_string(t *testing.T) {
-	g := NewGomegaWithT(t)
-
-	original := unstructured.Unstructured{
+func Test_preserveResourceVersion_ignores_if_original_resourceVersion_is_not_a_string(t *testing.T) {
+	existing := unstructured.Unstructured{
 		Object: map[string]interface{}{
 			"apiVersion": "v1",
 			"kind":       "Service",
@@ -112,15 +106,14 @@ func Test_fixIfResourceVersionIsAbsent_ignores_if_original_resourceVersion_is_no
 			"kind":       "Service",
 		},
 	}
-	err := fixIfResourceVersionIsAbsent(nil, original, &target)
-	g.Expect(err).To(BeNil())
-	g.Expect(target).To(Equal(expectedTarget))
+
+	err := preserveResourceVersion(nil, existing, &target, "")
+	assert.NoError(t, err)
+	assert.Equal(t, expectedTarget, target)
 }
 
-func Test_fixIfResourceVersionIsAbsent_set_metadata_and_resourceVersion(t *testing.T) {
-	g := NewGomegaWithT(t)
-
-	original := unstructured.Unstructured{
+func Test_preserveResourceVersion_set_metadata_and_resourceVersion(t *testing.T) {
+	existing := unstructured.Unstructured{
 		Object: map[string]interface{}{
 			"apiVersion": "v1",
 			"kind":       "Service",
@@ -129,22 +122,21 @@ func Test_fixIfResourceVersionIsAbsent_set_metadata_and_resourceVersion(t *testi
 			},
 		},
 	}
-	expectedTarget := original
+	expectedTarget := existing
 	target := unstructured.Unstructured{
 		Object: map[string]interface{}{
 			"apiVersion": "v1",
 			"kind":       "Service",
 		},
 	}
-	err := fixIfResourceVersionIsAbsent(nil, original, &target)
-	g.Expect(err).To(BeNil())
-	g.Expect(target).To(Equal(expectedTarget))
+
+	err := preserveResourceVersion(nil, existing, &target, "")
+	assert.NoError(t, err)
+	assert.Equal(t, expectedTarget, target)
 }
 
-func Test_fixIfResourceVersionIsAbsent_set_resourceVersion(t *testing.T) {
-	g := NewGomegaWithT(t)
-
-	original := unstructured.Unstructured{
+func Test_preserveResourceVersion_set_resourceVersion(t *testing.T) {
+	existing := unstructured.Unstructured{
 		Object: map[string]interface{}{
 			"apiVersion": "v1",
 			"kind":       "Service",
@@ -172,7 +164,8 @@ func Test_fixIfResourceVersionIsAbsent_set_resourceVersion(t *testing.T) {
 			},
 		},
 	}
-	err := fixIfResourceVersionIsAbsent(nil, original, &target)
-	g.Expect(err).To(BeNil())
-	g.Expect(target).To(Equal(expectedTarget))
+
+	err := preserveResourceVersion(nil, existing, &target, "")
+	assert.NoError(t, err)
+	assert.Equal(t, expectedTarget, target)
 }

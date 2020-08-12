@@ -33,7 +33,7 @@ func ResolveDryRun(in model.DryRunOn, gvk model.GroupVersionKind, client dynamic
 func HasServerDryRunSupport(gvk model.GroupVersionKind, client dynamic.Interface, runtime Runtime) (bool, error) {
 	oapi, err := runtime.OpenAPISchema()
 	if err != nil {
-		return false, fmt.Errorf("failed to download openapi: %v", err)
+		return false, fmt.Errorf("failed to download openapi: %w", err)
 	}
 	supports, err := supportsServerDryRun(oapi, gvk)
 	if err != nil {
@@ -42,7 +42,7 @@ func HasServerDryRunSupport(gvk model.GroupVersionKind, client dynamic.Interface
 		// If namespace supports dryRun, then we will support dryRun for CRDs only.
 		if supports {
 			if supports, err = hasCrd(gvk.GroupKind(), client); err != nil {
-				return false, fmt.Errorf("failed to check CRD: %v", err)
+				return false, fmt.Errorf("failed to check CRD: %w", err)
 			}
 		}
 	}
@@ -96,7 +96,7 @@ func crdFromDynamic(client dynamic.Interface) ([]schema.GroupKind, error) {
 		Resource: "customresourcedefinitions",
 	}).List(metav1.ListOptions{})
 	if err != nil {
-		return nil, fmt.Errorf("failed to list CRDs: %v", err)
+		return nil, fmt.Errorf("failed to list CRDs: %w", err)
 	}
 	if list == nil {
 		return nil, nil
