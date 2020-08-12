@@ -11,7 +11,7 @@ const (
 	AnnotationDryRunOn             = "kubor.echocat.org/dry-run-on"
 	AnnotationWaitUntil            = "kubor.echocat.org/wait-until"
 	AnnotationCleanupOn            = "kubor.echocat.org/cleanup-on"
-	AnnotationTransformationPrefix = "kubor.echocat.org/transformation-"
+	AnnotationTransformationPrefix = "transformation.kubor.echocat.org/"
 )
 
 type Annotations struct {
@@ -84,19 +84,30 @@ func (instance Annotations) GetCleanupOn(v *unstructured.Unstructured) (CleanupO
 	return result, result.Set(plain)
 }
 
-func (instance Annotations) GetTransformationState(v *unstructured.Unstructured, nameSuffix string, enabledDefault bool) (enabled bool, argument string, err error) {
+func (instance Annotations) GetTransformation(v *unstructured.Unstructured, name TransformationName) (result Transformation, err error) {
 	as := v.GetAnnotations()
-	plain := as[string(instance.Transformations.Name)+nameSuffix]
-	if plain == "" {
-		return enabledDefault, "", nil
-	}
+	plain := as[string(instance.Transformations.Name)+string(name)]
 	plain = strings.TrimSpace(plain)
-	switch strings.ToLower(plain) {
+	parts := strings.SplitN(plain, ":", 2)
+	switch strings.ToLower(parts[0]) {
+	case "":
+		// ignore
 	case "enabled", "true", "on":
-		return true, "", nil
+		v := true
+		result.Enabled = &v
+		if len(parts) > 1 {
+			arg := parts[1]
+			result.Argument = &arg
+		}
 	case "disabled", "false", "off":
-		return false, "", nil
+		v := false
+		result.Enabled = &v
+		if len(parts) > 1 {
+			arg := parts[1]
+			result.Argument = &arg
+		}
 	default:
-		return true, plain, nil
+		result.Argument = &plain
 	}
+	return
 }

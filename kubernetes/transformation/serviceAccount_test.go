@@ -21,7 +21,7 @@ func Test_preserveServiceAccountSecrets_ignores_different_GroupVersionKinds(t *t
 	}
 	target := expectedTarget
 
-	err := preserveServiceAccountSecrets(nil, existing, &target, "")
+	err := preserveServiceAccountSecrets(nil, existing, &target, nil)
 	assert.NoError(t, err)
 	assert.Equal(t, expectedTarget, target)
 }
@@ -36,7 +36,7 @@ func Test_preserveServiceAccountSecrets_ignores_on_non_ServiceAccount_kind(t *te
 	expectedTarget := existing
 	target := existing
 
-	err := preserveServiceAccountSecrets(nil, existing, &target, "")
+	err := preserveServiceAccountSecrets(nil, existing, &target, nil)
 	assert.NoError(t, err)
 	assert.Equal(t, expectedTarget, target)
 }
@@ -70,7 +70,7 @@ func Test_preserveServiceAccountSecrets_ignores_if_target_has_already_secrets(t 
 	}
 	target := expectedTarget
 
-	err := preserveServiceAccountSecrets(nil, existing, &target, "")
+	err := preserveServiceAccountSecrets(nil, existing, &target, nil)
 	assert.NoError(t, err)
 	assert.Equal(t, expectedTarget, target)
 }
@@ -100,7 +100,7 @@ func Test_preserveServiceAccountSecrets_ignores_if_target_has_already_imagePullS
 	}
 	target := expectedTarget
 
-	err := preserveServiceAccountSecrets(nil, existing, &target, "")
+	err := preserveServiceAccountSecrets(nil, existing, &target, nil)
 	assert.NoError(t, err)
 	assert.Equal(t, expectedTarget, target)
 }
@@ -140,7 +140,7 @@ func Test_preserveServiceAccountSecrets_applies_secrets(t *testing.T) {
 		},
 	}
 
-	err := preserveServiceAccountSecrets(nil, existing, &target, "")
+	err := preserveServiceAccountSecrets(nil, existing, &target, nil)
 	assert.NoError(t, err)
 	assert.Equal(t, expectedTarget, target)
 }
@@ -176,7 +176,7 @@ func Test_preserveServiceAccountSecrets_applies_imagePullSecrets(t *testing.T) {
 		},
 	}
 
-	err := preserveServiceAccountSecrets(nil, existing, &target, "")
+	err := preserveServiceAccountSecrets(nil, existing, &target, nil)
 	assert.NoError(t, err)
 	assert.Equal(t, expectedTarget, target)
 }

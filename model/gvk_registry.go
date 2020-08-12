@@ -44,6 +44,10 @@ var DefaultGroupVersionKindRegistry = (&GroupVersionKindRegistry{}).
 		With(appsv1beta2.SchemeGroupVersion, &appsv1beta2.DaemonSet{}).
 		With(extensionsv1beta1.SchemeGroupVersion, &extensionsv1beta1.DaemonSet{}).
 		Build()).
+	With(BuildGroupVersionKinds(appsv1.SchemeGroupVersion, &appsv1.ReplicaSet{}).
+		With(appsv1beta2.SchemeGroupVersion, &appsv1beta2.ReplicaSet{}).
+		With(extensionsv1beta1.SchemeGroupVersion, &extensionsv1beta1.ReplicaSet{}).
+		Build()).
 	With(BuildGroupVersionKinds(apiextensionsv1.SchemeGroupVersion, &apiextensionsv1.CustomResourceDefinition{}).
 		With(apiextensions.SchemeGroupVersion, &apiextensions.CustomResourceDefinition{}).
 		With(apiextensionsv1beta1.SchemeGroupVersion, &apiextensionsv1beta1.CustomResourceDefinition{}).

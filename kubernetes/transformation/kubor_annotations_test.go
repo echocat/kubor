@@ -52,7 +52,7 @@ func Test_ensureKuborAnnotations_drop(t *testing.T) {
 		},
 	}
 
-	err := ensureKuborAnnotations(&project, &target, "")
+	err := ensureKuborAnnotations(&project, &target, nil)
 
 	assert.NoError(t, err)
 	assert.Equal(t, expectedTarget, target)
@@ -105,7 +105,7 @@ func Test_ensureKuborAnnotations_leave(t *testing.T) {
 		},
 	}
 
-	err := ensureKuborAnnotations(&project, &target, "")
+	err := ensureKuborAnnotations(&project, &target, nil)
 
 	assert.NoError(t, err)
 	assert.Equal(t, expectedTarget, target)
@@ -176,7 +176,7 @@ func Test_ensureKuborAnnotations_drop_with_spec_template(t *testing.T) {
 		},
 	}
 
-	err := ensureKuborAnnotations(&project, &target, "")
+	err := ensureKuborAnnotations(&project, &target, nil)
 
 	assert.NoError(t, err)
 	assert.Equal(t, expectedTarget, target)

@@ -21,7 +21,7 @@ func Test_preserveResourceVersion_ignores_different_GroupVersionKinds(t *testing
 	}
 	target := expectedTarget
 
-	err := preserveResourceVersion(nil, existing, &target, "")
+	err := preserveResourceVersion(nil, existing, &target, nil)
 	assert.NoError(t, err)
 	assert.Equal(t, expectedTarget, target)
 }
@@ -36,7 +36,7 @@ func Test_preserveResourceVersion_ignores_on_non_Service_kind(t *testing.T) {
 	expectedTarget := existing
 	target := existing
 
-	err := preserveResourceVersion(nil, existing, &target, "")
+	err := preserveResourceVersion(nil, existing, &target, nil)
 	assert.NoError(t, err)
 	assert.Equal(t, expectedTarget, target)
 }
@@ -51,7 +51,7 @@ func Test_preserveResourceVersion_ignores_on_non_v1_version(t *testing.T) {
 	expectedTarget := existing
 	target := existing
 
-	err := preserveResourceVersion(nil, existing, &target, "")
+	err := preserveResourceVersion(nil, existing, &target, nil)
 	assert.NoError(t, err)
 	assert.Equal(t, expectedTarget, target)
 }
@@ -79,7 +79,7 @@ func Test_preserveResourceVersion_ignores_if_original_has_no_resourceVersion(t *
 		},
 	}
 
-	err := preserveResourceVersion(nil, existing, &target, "")
+	err := preserveResourceVersion(nil, existing, &target, nil)
 	assert.NoError(t, err)
 	assert.Equal(t, expectedTarget, target)
 }
@@ -107,7 +107,7 @@ func Test_preserveResourceVersion_ignores_if_original_resourceVersion_is_not_a_s
 		},
 	}
 
-	err := preserveResourceVersion(nil, existing, &target, "")
+	err := preserveResourceVersion(nil, existing, &target, nil)
 	assert.NoError(t, err)
 	assert.Equal(t, expectedTarget, target)
 }
@@ -130,7 +130,7 @@ func Test_preserveResourceVersion_set_metadata_and_resourceVersion(t *testing.T)
 		},
 	}
 
-	err := preserveResourceVersion(nil, existing, &target, "")
+	err := preserveResourceVersion(nil, existing, &target, nil)
 	assert.NoError(t, err)
 	assert.Equal(t, expectedTarget, target)
 }
@@ -165,7 +165,7 @@ func Test_preserveResourceVersion_set_resourceVersion(t *testing.T) {
 		},
 	}
 
-	err := preserveResourceVersion(nil, existing, &target, "")
+	err := preserveResourceVersion(nil, existing, &target, nil)
 	assert.NoError(t, err)
 	assert.Equal(t, expectedTarget, target)
 }

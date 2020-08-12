@@ -9,13 +9,13 @@ import (
 )
 
 var testTransformations = Transformations{
-	Updates: map[Name]Update{
+	Updates: map[model.TransformationName]Update{
 		"ufoo": testTransformation{"ufoo"},
 		"ubar": testTransformation{"ubar"},
 		"foo":  testTransformation{"foo"},
 		"bar":  testTransformation{"bar"},
 	},
-	Creates: map[Name]Create{
+	Creates: map[model.TransformationName]Create{
 		"cfoo": testTransformation{"cfoo"},
 		"cbar": testTransformation{"cbar"},
 		"foo":  testTransformation{"foo"},
@@ -79,7 +79,7 @@ func TestTransformations_TransformForUpdate_calling_enabled(t *testing.T) {
 					model.AnnotationTransformationPrefix + "ufoo": "enabled",
 					model.AnnotationTransformationPrefix + "ubar": "disabled",
 					"foo":  "test:foo:something else",
-					"ufoo": "test:ufoo:",
+					"ufoo": "test:ufoo:nil",
 				},
 			},
 		},
@@ -134,7 +134,7 @@ func TestTransformations_TransformForCreate_calling_enabled(t *testing.T) {
 					model.AnnotationTransformationPrefix + "cfoo": "enabled",
 					model.AnnotationTransformationPrefix + "cbar": "disabled",
 					"foo":  "test:foo:something else",
-					"cfoo": "test:cfoo:",
+					"cfoo": "test:cfoo:nil",
 				},
 			},
 		},
@@ -147,21 +147,29 @@ func TestTransformations_TransformForCreate_calling_enabled(t *testing.T) {
 }
 
 type testTransformation struct {
-	name Name
+	name model.TransformationName
 }
 
-func (instance testTransformation) TransformForUpdate(p *model.Project, _ unstructured.Unstructured, target *unstructured.Unstructured, argument string) error {
+func (instance testTransformation) TransformForUpdate(p *model.Project, _ unstructured.Unstructured, target *unstructured.Unstructured, argument *string) error {
 	return instance.TransformForCreate(p, target, argument)
 }
 
-func (instance testTransformation) TransformForCreate(_ *model.Project, target *unstructured.Unstructured, argument string) error {
-	if argument == "error" {
-		return fmt.Errorf("expected:%v:%s", instance.name, argument)
+func (instance testTransformation) TransformForCreate(_ *model.Project, target *unstructured.Unstructured, argument *string) error {
+	if argument != nil && *argument == "error" {
+		return fmt.Errorf("expected:%v:%s", instance.name, *argument)
 	}
 
+	arg := "nil"
+	if argument != nil {
+		arg = *argument
+	}
 	as := target.GetAnnotations()
-	as[instance.name.String()] = fmt.Sprintf("test:%v:%s", instance.name, argument)
+	as[instance.name.String()] = fmt.Sprintf("test:%v:%v", instance.name, arg)
 	target.SetAnnotations(as)
 
 	return nil
+}
+
+func (instance testTransformation) DefaultEnabled(*unstructured.Unstructured) bool {
+	return true
 }

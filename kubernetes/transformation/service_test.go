@@ -24,7 +24,7 @@ func Test_preserveServiceClusterIps_ignores_different_GroupVersionKinds(t *testi
 	}
 	target := expectedTarget
 
-	err := preserveServiceClusterIps(nil, existing, &target, "")
+	err := preserveServiceClusterIps(nil, existing, &target, nil)
 	assert.NoError(t, err)
 	assert.Equal(t, expectedTarget, target)
 }
@@ -47,7 +47,7 @@ func Test_preserveServiceClusterIps_ignores_on_non_Service_kind(t *testing.T) {
 	}
 	target := expectedTarget
 
-	err := preserveServiceClusterIps(nil, existing, &target, "")
+	err := preserveServiceClusterIps(nil, existing, &target, nil)
 	assert.NoError(t, err)
 	assert.Equal(t, expectedTarget, target)
 }
@@ -75,7 +75,7 @@ func Test_preserveServiceClusterIps_ignores_if_original_has_no_clusterIp(t *test
 		},
 	}
 
-	err := preserveServiceClusterIps(nil, existing, &target, "")
+	err := preserveServiceClusterIps(nil, existing, &target, nil)
 	assert.NoError(t, err)
 	assert.Equal(t, expectedTarget, target)
 }
@@ -98,7 +98,7 @@ func Test_preserveServiceClusterIps_set_spec_and_clusterIP(t *testing.T) {
 		},
 	}
 
-	err := preserveServiceClusterIps(nil, existing, &target, "")
+	err := preserveServiceClusterIps(nil, existing, &target, nil)
 	assert.NoError(t, err)
 	assert.Equal(t, expectedTarget, target)
 }
@@ -132,7 +132,7 @@ func Test_preserveServiceClusterIps_does_not_override(t *testing.T) {
 		},
 	}
 
-	err := preserveServiceClusterIps(nil, existing, &target, "")
+	err := preserveServiceClusterIps(nil, existing, &target, nil)
 	assert.NoError(t, err)
 	assert.Equal(t, expectedTarget, target)
 }
@@ -167,7 +167,7 @@ func Test_preserveServiceClusterIps_set_clusterIP(t *testing.T) {
 		},
 	}
 
-	err := preserveServiceClusterIps(nil, existing, &target, "")
+	err := preserveServiceClusterIps(nil, existing, &target, nil)
 	assert.NoError(t, err)
 	assert.Equal(t, expectedTarget, target)
 }
@@ -190,7 +190,7 @@ func Test_preserveServiceHealthCheckNodePort_ignores_different_GroupVersionKinds
 	}
 	target := expectedTarget
 
-	err := preserveServiceHealthCheckNodePort(nil, existing, &target, "")
+	err := preserveServiceHealthCheckNodePort(nil, existing, &target, nil)
 	assert.NoError(t, err)
 	assert.Equal(t, expectedTarget, target)
 }
@@ -213,7 +213,7 @@ func Test_preserveServiceHealthCheckNodePort_ignores_on_non_Service_kind(t *test
 	}
 	target := expectedTarget
 
-	err := preserveServiceHealthCheckNodePort(nil, existing, &target, "")
+	err := preserveServiceHealthCheckNodePort(nil, existing, &target, nil)
 	assert.NoError(t, err)
 	assert.Equal(t, expectedTarget, target)
 }
@@ -241,7 +241,7 @@ func Test_preserveServiceHealthCheckNodePort_ignores_if_original_has_no_clusterI
 		},
 	}
 
-	err := preserveServiceHealthCheckNodePort(nil, existing, &target, "")
+	err := preserveServiceHealthCheckNodePort(nil, existing, &target, nil)
 	assert.NoError(t, err)
 	assert.Equal(t, expectedTarget, target)
 }
@@ -264,7 +264,7 @@ func Test_preserveServiceHealthCheckNodePort_set_spec_and_clusterIP(t *testing.T
 		},
 	}
 
-	err := preserveServiceHealthCheckNodePort(nil, existing, &target, "")
+	err := preserveServiceHealthCheckNodePort(nil, existing, &target, nil)
 	assert.NoError(t, err)
 	assert.Equal(t, expectedTarget, target)
 }
@@ -298,7 +298,7 @@ func Test_preserveServiceHealthCheckNodePort_does_not_override(t *testing.T) {
 		},
 	}
 
-	err := preserveServiceHealthCheckNodePort(nil, existing, &target, "")
+	err := preserveServiceHealthCheckNodePort(nil, existing, &target, nil)
 	assert.NoError(t, err)
 	assert.Equal(t, expectedTarget, target)
 }
@@ -333,7 +333,7 @@ func Test_preserveServiceHealthCheckNodePort_set_clusterIP(t *testing.T) {
 		},
 	}
 
-	err := preserveServiceHealthCheckNodePort(nil, existing, &target, "")
+	err := preserveServiceHealthCheckNodePort(nil, existing, &target, nil)
 	assert.NoError(t, err)
 	assert.Equal(t, expectedTarget, target)
 }
@@ -367,7 +367,7 @@ func Test_preserveServiceNodePorts_ignores_different_GroupVersionKinds(t *testin
 	}
 	target := expectedTarget
 
-	err := preserveServiceNodePorts(nil, existing, &target, "")
+	err := preserveServiceNodePorts(nil, existing, &target, nil)
 	assert.NoError(t, err)
 	assert.Equal(t, expectedTarget, target)
 }
@@ -401,7 +401,7 @@ func Test_preserveServiceNodePorts_ignores_on_non_Service_kind(t *testing.T) {
 	}
 	target := expectedTarget
 
-	err := preserveServiceNodePorts(nil, existing, &target, "")
+	err := preserveServiceNodePorts(nil, existing, &target, nil)
 	assert.NoError(t, err)
 	assert.Equal(t, expectedTarget, target)
 }
@@ -438,7 +438,7 @@ func Test_preserveServiceNodePorts_ignores_if_original_has_no_nodePort(t *testin
 		},
 	}
 
-	err := preserveServiceNodePorts(nil, existing, &target, "")
+	err := preserveServiceNodePorts(nil, existing, &target, nil)
 	assert.NoError(t, err)
 	assert.Equal(t, expectedTarget, target)
 }
@@ -504,7 +504,7 @@ func Test_preserveServiceNodePorts_set(t *testing.T) {
 		},
 	}
 
-	err := preserveServiceNodePorts(nil, existing, &target, "")
+	err := preserveServiceNodePorts(nil, existing, &target, nil)
 	assert.NoError(t, err)
 	assert.Equal(t, expectedTarget, target)
 }

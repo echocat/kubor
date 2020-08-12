@@ -14,7 +14,7 @@ func init() {
 
 var ServiceGvks = model.BuildGroupVersionKinds(v1.SchemeGroupVersion, &v1.Service{}).Build()
 
-func preserveServiceClusterIps(_ *model.Project, existing unstructured.Unstructured, target *unstructured.Unstructured, _ string) error {
+func preserveServiceClusterIps(_ *model.Project, existing unstructured.Unstructured, target *unstructured.Unstructured, _ *string) error {
 	if !groupVersionKindMatches(&existing, target) {
 		return nil
 	}
@@ -39,7 +39,7 @@ func preserveServiceClusterIps(_ *model.Project, existing unstructured.Unstructu
 	return unstructured.SetNestedField(target.Object, clusterIp, "spec", "clusterIP")
 }
 
-func preserveServiceHealthCheckNodePort(_ *model.Project, existing unstructured.Unstructured, target *unstructured.Unstructured, _ string) error {
+func preserveServiceHealthCheckNodePort(_ *model.Project, existing unstructured.Unstructured, target *unstructured.Unstructured, _ *string) error {
 	if !groupVersionKindMatches(&existing, target) {
 		return nil
 	}
@@ -64,7 +64,7 @@ func preserveServiceHealthCheckNodePort(_ *model.Project, existing unstructured.
 	return unstructured.SetNestedField(target.Object, clusterIp, "spec", "healthCheckNodePort")
 }
 
-func preserveServiceNodePorts(_ *model.Project, existing unstructured.Unstructured, target *unstructured.Unstructured, _ string) error {
+func preserveServiceNodePorts(_ *model.Project, existing unstructured.Unstructured, target *unstructured.Unstructured, _ *string) error {
 	if !groupVersionKindMatches(&existing, target) {
 		return nil
 	}

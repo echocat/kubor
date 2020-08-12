@@ -9,7 +9,7 @@ func init() {
 	Default.MustRegisterUpdateFunc("preserve-resource-version", preserveResourceVersion)
 }
 
-func preserveResourceVersion(_ *model.Project, original unstructured.Unstructured, target *unstructured.Unstructured, _ string) error {
+func preserveResourceVersion(_ *model.Project, original unstructured.Unstructured, target *unstructured.Unstructured, _ *string) error {
 	if !groupVersionKindMatches(&original, target) {
 		return nil
 	}

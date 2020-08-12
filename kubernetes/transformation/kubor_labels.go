@@ -3,27 +3,39 @@ package transformation
 import (
 	"github.com/echocat/kubor/kubernetes/support"
 	"github.com/echocat/kubor/model"
+	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
 func init() {
-	Default.MustRegisterUpdateFunc("apply-labels", func(project *model.Project, _ unstructured.Unstructured, target *unstructured.Unstructured, argument string) error {
-		return ensureKuborLabels(project, target, argument)
-	})
-	Default.MustRegisterCreateFunc("apply-labels", ensureKuborLabels)
+	t := ensureKuborLabels{}
+	Default.MustRegisterUpdate("apply-labels", &t)
+	Default.MustRegisterUpdate("apply-labels", &t)
 }
 
-func ensureKuborLabels(project *model.Project, target *unstructured.Unstructured, _ string) error {
-	if err := ensureKuborLabelsOfPath(project, target, "metadata", "labels"); err != nil {
+var NamespaceGvks = model.BuildGroupVersionKinds(v1.SchemeGroupVersion, &v1.Namespace{}).Build()
+
+type ensureKuborLabels struct{}
+
+func (instance *ensureKuborLabels) DefaultEnabled(target *unstructured.Unstructured) bool {
+	return !NamespaceGvks.Contains(model.GroupVersionKind(target.GroupVersionKind()))
+}
+
+func (instance *ensureKuborLabels) TransformForUpdate(p *model.Project, _ unstructured.Unstructured, target *unstructured.Unstructured, argument *string) error {
+	return instance.TransformForCreate(p, target, argument)
+}
+
+func (instance *ensureKuborLabels) TransformForCreate(project *model.Project, target *unstructured.Unstructured, _ *string) error {
+	if err := instance.ensureKuborLabelsOfPath(project, target, "metadata", "labels"); err != nil {
 		return err
 	}
-	if err := ensureKuborLabelsOfPath(project, target, "spec", "template", "metadata", "labels"); err != nil {
+	if err := instance.ensureKuborLabelsOfPath(project, target, "spec", "template", "metadata", "labels"); err != nil {
 		return err
 	}
 	return nil
 }
 
-func ensureKuborLabelsOfPath(project *model.Project, target *unstructured.Unstructured, fields ...string) error {
+func (instance ensureKuborLabels) ensureKuborLabelsOfPath(project *model.Project, target *unstructured.Unstructured, fields ...string) error {
 	pl := project.Labels
 	labels, _, err := unstructured.NestedStringMap(target.Object, fields...)
 	if err != nil {
@@ -33,14 +45,14 @@ func ensureKuborLabelsOfPath(project *model.Project, target *unstructured.Unstru
 		labels = make(map[string]string)
 	}
 
-	ensureKuborLabel(&labels, pl.GroupId, project.GroupId.String())
-	ensureKuborLabel(&labels, pl.ArtifactId, project.ArtifactId.String())
-	ensureKuborLabel(&labels, pl.Release, support.NormalizeLabelValue(project.Release))
+	instance.ensureKuborLabel(&labels, pl.GroupId, project.GroupId.String())
+	instance.ensureKuborLabel(&labels, pl.ArtifactId, project.ArtifactId.String())
+	instance.ensureKuborLabel(&labels, pl.Release, support.NormalizeLabelValue(project.Release))
 
 	return unstructured.SetNestedStringMap(target.Object, labels, fields...)
 }
 
-func ensureKuborLabel(labels *map[string]string, label model.Label, value string) {
+func (instance ensureKuborLabels) ensureKuborLabel(labels *map[string]string, label model.Label, value string) {
 	switch label.Action {
 	case model.LabelActionDrop:
 		delete(*labels, label.Name.String())

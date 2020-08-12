@@ -6,6 +6,7 @@ import (
 	"github.com/echocat/kubor/log"
 	"gopkg.in/yaml.v2"
 	"io"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"os"
 	"path/filepath"
 )
@@ -21,6 +22,7 @@ type Project struct {
 	ConditionalValues []ConditionalValues `yaml:"values,omitempty" json:"values,omitempty"`
 	Labels            Labels              `yaml:"labels,omitempty" json:"labels,omitempty"`
 	Annotations       Annotations         `yaml:"annotations,omitempty" json:"annotations,omitempty"`
+	Transformations   Transformations     `yaml:"transformations,omitempty" json:"transformations,omitempty"`
 	Scheme            Scheme              `yaml:"scheme,omitempty" json:"scheme,omitempty"`
 
 	// Values set using implicitly.
@@ -34,11 +36,14 @@ type Project struct {
 func NewProject() Project {
 	return Project{
 		Claim:             NewClaim(),
+		Stages:            NewStages(),
 		Templating:        NewTemplating(),
 		ConditionalValues: NewConditionalValuesSlice(),
-		Values:            NewValues(),
 		Labels:            NewLabels(),
 		Annotations:       NewAnnotations(),
+		Transformations:   NewTransformations(),
+		Values:            NewValues(),
+		Env:               make(map[string]string),
 	}
 }
 
@@ -72,6 +77,20 @@ func (instance Project) RenderedTemplatesProvider() (ContentProvider, error) {
 
 func (instance Project) RenderedTemplateFile(file string, writer io.Writer) error {
 	return instance.Templating.RenderTemplateFile(file, instance, writer)
+}
+
+func (instance Project) GetTransformation(v *unstructured.Unstructured, name TransformationName) (result Transformation, err error) {
+	if v, tErr := instance.Transformations.Get(name); tErr != nil {
+		return Transformation{}, tErr
+	} else {
+		result = v
+	}
+	if v, aErr := instance.Annotations.GetTransformation(v, name); aErr != nil {
+		return Transformation{}, aErr
+	} else {
+		result = result.Merge(v)
+	}
+	return
 }
 
 type ProjectFactory struct {

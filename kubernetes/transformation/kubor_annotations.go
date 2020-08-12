@@ -6,18 +6,18 @@ import (
 	"strings"
 )
 
-const kuborAnnotationsTransformationName = Name("apply-annotations")
+const kuborAnnotationsTransformationName = model.TransformationName("apply-annotations")
 
 func init() {
 	Default.MustRegisterUpdateFunc(kuborAnnotationsTransformationName, ensureKuborAnnotationsOnUpdate)
 	Default.MustRegisterCreateFunc(kuborAnnotationsTransformationName, ensureKuborAnnotations)
 }
 
-func ensureKuborAnnotationsOnUpdate(project *model.Project, _ unstructured.Unstructured, target *unstructured.Unstructured, argument string) error {
+func ensureKuborAnnotationsOnUpdate(project *model.Project, _ unstructured.Unstructured, target *unstructured.Unstructured, argument *string) error {
 	return ensureKuborAnnotations(project, target, argument)
 }
 
-func ensureKuborAnnotations(project *model.Project, target *unstructured.Unstructured, _ string) error {
+func ensureKuborAnnotations(project *model.Project, target *unstructured.Unstructured, _ *string) error {
 	if err := ensureKuborAnnotationsOfPath(project, target, "metadata", "annotations"); err != nil {
 		return err
 	}

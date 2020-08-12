@@ -12,7 +12,7 @@ func init() {
 
 var ServiceAccountGvks = model.BuildGroupVersionKinds(v1.SchemeGroupVersion, &v1.ServiceAccount{}).Build()
 
-func preserveServiceAccountSecrets(_ *model.Project, existing unstructured.Unstructured, target *unstructured.Unstructured, _ string) error {
+func preserveServiceAccountSecrets(_ *model.Project, existing unstructured.Unstructured, target *unstructured.Unstructured, _ *string) error {
 	if !groupVersionKindMatches(&existing, target) {
 		return nil
 	}

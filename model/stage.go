@@ -49,10 +49,13 @@ func (instance *Stage) UnmarshalText(text []byte) error {
 
 type Stages []Stage
 
-func (instance Stages) Contains(what Stage) bool {
-	if len(instance) == 0 && what == StageDefault {
-		return true
+func NewStages() Stages {
+	return Stages{
+		StageDefault,
 	}
+}
+
+func (instance Stages) Contains(what Stage) bool {
 	for _, candidate := range instance {
 		if candidate == what {
 			return true
@@ -101,11 +104,6 @@ func (instance StageRange) IsRelevant() bool {
 }
 
 func (instance StageRange) Matches(stages Stages, stage Stage) bool {
-	if len(stages) == 0 && stage == StageDefault {
-		// Default behavior if no stages are defined and the stage is the default one.
-		return true
-	}
-
 	started := false
 	for _, current := range stages {
 		if !started {
