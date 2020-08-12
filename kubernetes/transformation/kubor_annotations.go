@@ -9,8 +9,8 @@ import (
 const kuborAnnotationsTransformationName = Name("apply-annotations")
 
 func init() {
-	Default.RegisterUpdateFunc(kuborAnnotationsTransformationName, ensureKuborAnnotationsOnUpdate)
-	Default.RegisterCreateFunc(kuborAnnotationsTransformationName, ensureKuborAnnotations)
+	Default.MustRegisterUpdateFunc(kuborAnnotationsTransformationName, ensureKuborAnnotationsOnUpdate)
+	Default.MustRegisterCreateFunc(kuborAnnotationsTransformationName, ensureKuborAnnotations)
 }
 
 func ensureKuborAnnotationsOnUpdate(project *model.Project, _ unstructured.Unstructured, target *unstructured.Unstructured, argument string) error {

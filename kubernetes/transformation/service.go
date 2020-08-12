@@ -7,9 +7,9 @@ import (
 )
 
 func init() {
-	Default.RegisterUpdateFunc("service-preserve-clusterIps", preserveServiceClusterIps)
-	Default.RegisterUpdateFunc("service-preserve-healthCheckNodePort", preserveServiceHealthCheckNodePort)
-	Default.RegisterUpdateFunc("service-preserve-nodePorts", preserveServiceNodePorts)
+	Default.MustRegisterUpdateFunc("service-preserve-cluster-ips", preserveServiceClusterIps)
+	Default.MustRegisterUpdateFunc("service-preserve-health-check-node-port", preserveServiceHealthCheckNodePort)
+	Default.MustRegisterUpdateFunc("service-preserve-node-ports", preserveServiceNodePorts)
 }
 
 var ServiceGvks = model.BuildGroupVersionKinds(v1.SchemeGroupVersion, &v1.Service{}).Build()
@@ -47,7 +47,7 @@ func preserveServiceHealthCheckNodePort(_ *model.Project, existing unstructured.
 		return nil
 	}
 
-	clusterIp, exist, err := unstructured.NestedString(existing.Object, "spec", "healthCheckNodePort")
+	clusterIp, exist, err := unstructured.NestedInt64(existing.Object, "spec", "healthCheckNodePort")
 	if err != nil {
 		return err
 	}
@@ -55,7 +55,7 @@ func preserveServiceHealthCheckNodePort(_ *model.Project, existing unstructured.
 		return nil
 	}
 
-	if _, exist, err := unstructured.NestedString(target.Object, "spec", "healthCheckNodePort"); err != nil {
+	if _, exist, err := unstructured.NestedInt64(target.Object, "spec", "healthCheckNodePort"); err != nil {
 		return err
 	} else if exist {
 		return nil

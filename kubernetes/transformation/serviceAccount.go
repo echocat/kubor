@@ -7,7 +7,7 @@ import (
 )
 
 func init() {
-	Default.RegisterUpdateFunc("serviceAccount-preserve-secrets", preserveServiceAccountSecrets)
+	Default.MustRegisterUpdateFunc("service-account-preserve-secrets", preserveServiceAccountSecrets)
 }
 
 var ServiceAccountGvks = model.BuildGroupVersionKinds(v1.SchemeGroupVersion, &v1.ServiceAccount{}).Build()

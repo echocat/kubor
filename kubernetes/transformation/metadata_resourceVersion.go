@@ -6,7 +6,7 @@ import (
 )
 
 func init() {
-	Default.RegisterUpdateFunc("preserve-ResourceVersion", preserveResourceVersion)
+	Default.MustRegisterUpdateFunc("preserve-resource-version", preserveResourceVersion)
 }
 
 func preserveResourceVersion(_ *model.Project, original unstructured.Unstructured, target *unstructured.Unstructured, _ string) error {

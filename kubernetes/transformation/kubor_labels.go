@@ -7,10 +7,10 @@ import (
 )
 
 func init() {
-	Default.RegisterUpdateFunc("apply-labels", func(project *model.Project, _ unstructured.Unstructured, target *unstructured.Unstructured, argument string) error {
+	Default.MustRegisterUpdateFunc("apply-labels", func(project *model.Project, _ unstructured.Unstructured, target *unstructured.Unstructured, argument string) error {
 		return ensureKuborLabels(project, target, argument)
 	})
-	Default.RegisterCreateFunc("apply-labels", ensureKuborLabels)
+	Default.MustRegisterCreateFunc("apply-labels", ensureKuborLabels)
 }
 
 func ensureKuborLabels(project *model.Project, target *unstructured.Unstructured, _ string) error {

@@ -35,7 +35,10 @@ func (instance CreateFunc) TransformForCreate(p *model.Project, target *unstruct
 	return instance(p, target, argument)
 }
 
-func (instance *Transformations) RegisterUpdate(name Name, v Update) Update {
+func (instance *Transformations) RegisterUpdate(name Name, v Update) error {
+	if _, err := name.MarshalText(); err != nil {
+		return err
+	}
 	if instance == nil {
 		*instance = Transformations{}
 	}
@@ -43,14 +46,23 @@ func (instance *Transformations) RegisterUpdate(name Name, v Update) Update {
 		instance.Updates = map[Name]Update{}
 	}
 	instance.Updates[name] = v
-	return v
+	return nil
 }
 
-func (instance *Transformations) RegisterUpdateFunc(name Name, v UpdateFunc) {
-	instance.RegisterUpdate(name, v)
+func (instance *Transformations) RegisterUpdateFunc(name Name, v UpdateFunc) error {
+	return instance.RegisterUpdate(name, v)
 }
 
-func (instance *Transformations) RegisterCreate(name Name, v Create) Create {
+func (instance *Transformations) MustRegisterUpdateFunc(name Name, v UpdateFunc) {
+	if err := instance.RegisterUpdateFunc(name, v); err != nil {
+		panic(err)
+	}
+}
+
+func (instance *Transformations) RegisterCreate(name Name, v Create) error {
+	if _, err := name.MarshalText(); err != nil {
+		return err
+	}
 	if instance == nil {
 		*instance = Transformations{}
 	}
@@ -58,11 +70,17 @@ func (instance *Transformations) RegisterCreate(name Name, v Create) Create {
 		instance.Creates = map[Name]Create{}
 	}
 	instance.Creates[name] = v
-	return v
+	return nil
 }
 
-func (instance *Transformations) RegisterCreateFunc(name Name, v CreateFunc) {
-	instance.RegisterCreate(name, v)
+func (instance *Transformations) RegisterCreateFunc(name Name, v CreateFunc) error {
+	return instance.RegisterCreate(name, v)
+}
+
+func (instance *Transformations) MustRegisterCreateFunc(name Name, v CreateFunc) {
+	if err := instance.RegisterCreateFunc(name, v); err != nil {
+		panic(err)
+	}
 }
 
 func (instance Transformations) TransformForUpdate(p *model.Project, existing unstructured.Unstructured, target *unstructured.Unstructured) error {

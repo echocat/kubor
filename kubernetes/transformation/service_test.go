@@ -178,7 +178,7 @@ func Test_preserveServiceHealthCheckNodePort_ignores_different_GroupVersionKinds
 			"apiVersion": "apps/v1",
 			"kind":       "Service",
 			"spec": map[string]interface{}{
-				"healthCheckNodePort": "123",
+				"healthCheckNodePort": int64(123),
 			},
 		},
 	}
@@ -201,7 +201,7 @@ func Test_preserveServiceHealthCheckNodePort_ignores_on_non_Service_kind(t *test
 			"apiVersion": "v1",
 			"kind":       "Servicex",
 			"spec": map[string]interface{}{
-				"healthCheckNodePort": "123",
+				"healthCheckNodePort": int64(123),
 			},
 		},
 	}
@@ -252,7 +252,7 @@ func Test_preserveServiceHealthCheckNodePort_set_spec_and_clusterIP(t *testing.T
 			"apiVersion": "v1",
 			"kind":       "Service",
 			"spec": map[string]interface{}{
-				"healthCheckNodePort": "123",
+				"healthCheckNodePort": int64(123),
 			},
 		},
 	}
@@ -275,7 +275,7 @@ func Test_preserveServiceHealthCheckNodePort_does_not_override(t *testing.T) {
 			"apiVersion": "v1",
 			"kind":       "Service",
 			"spec": map[string]interface{}{
-				"healthCheckNodePort": "123",
+				"healthCheckNodePort": int64(123),
 			},
 		},
 	}
@@ -284,7 +284,7 @@ func Test_preserveServiceHealthCheckNodePort_does_not_override(t *testing.T) {
 			"apiVersion": "v1",
 			"kind":       "Service",
 			"spec": map[string]interface{}{
-				"healthCheckNodePort": "666",
+				"healthCheckNodePort": int64(666),
 			},
 		},
 	}
@@ -293,7 +293,7 @@ func Test_preserveServiceHealthCheckNodePort_does_not_override(t *testing.T) {
 			"apiVersion": "v1",
 			"kind":       "Service",
 			"spec": map[string]interface{}{
-				"healthCheckNodePort": "666",
+				"healthCheckNodePort": int64(666),
 			},
 		},
 	}
@@ -309,7 +309,7 @@ func Test_preserveServiceHealthCheckNodePort_set_clusterIP(t *testing.T) {
 			"apiVersion": "v1",
 			"kind":       "Service",
 			"spec": map[string]interface{}{
-				"healthCheckNodePort": "123",
+				"healthCheckNodePort": int64(123),
 			},
 		},
 	}
@@ -319,7 +319,7 @@ func Test_preserveServiceHealthCheckNodePort_set_clusterIP(t *testing.T) {
 			"kind":       "Service",
 			"spec": map[string]interface{}{
 				"foo":                 "bar",
-				"healthCheckNodePort": "123",
+				"healthCheckNodePort": int64(123),
 			},
 		},
 	}
