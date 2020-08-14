@@ -9,17 +9,17 @@ import (
 )
 
 var testTransformations = Transformations{
-	Updates: map[model.TransformationName]Update{
-		"ufoo": testTransformation{"ufoo"},
-		"ubar": testTransformation{"ubar"},
-		"foo":  testTransformation{"foo"},
-		"bar":  testTransformation{"bar"},
+	Updates: Updates{
+		testTransformation{transformation{"ufoo"}},
+		testTransformation{transformation{"ubar"}},
+		testTransformation{transformation{"foo"}},
+		testTransformation{transformation{"bar"}},
 	},
-	Creates: map[model.TransformationName]Create{
-		"cfoo": testTransformation{"cfoo"},
-		"cbar": testTransformation{"cbar"},
-		"foo":  testTransformation{"foo"},
-		"bar":  testTransformation{"bar"},
+	Creates: Creates{
+		testTransformation{transformation{"cfoo"}},
+		testTransformation{transformation{"cbar"}},
+		testTransformation{transformation{"foo"}},
+		testTransformation{transformation{"bar"}},
 	},
 }
 
@@ -147,7 +147,7 @@ func TestTransformations_TransformForCreate_calling_enabled(t *testing.T) {
 }
 
 type testTransformation struct {
-	name model.TransformationName
+	transformation
 }
 
 func (instance testTransformation) TransformForUpdate(p *model.Project, _ unstructured.Unstructured, target *unstructured.Unstructured, argument *string) error {

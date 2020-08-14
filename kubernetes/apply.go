@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"github.com/echocat/kubor/common"
-	"github.com/echocat/kubor/kubernetes/transformation"
 	"github.com/echocat/kubor/log"
 	"github.com/echocat/kubor/model"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -129,10 +128,6 @@ func (instance *ApplyObject) Execute(scope string, dryRunOn model.DryRunOn) (err
 			WithField("status", "success").
 			WithDeepFieldOn("response", original, l.IsDebugEnabled).
 			Debug("%v does exist - it will be updated.", instance.object)
-
-		if err := transformation.Default.TransformForUpdate(instance.project, *original, instance.object.Object); err != nil {
-			return err
-		}
 
 		return instance.update(scope, *original, dryRunOn)
 	}

@@ -6,31 +6,46 @@ import (
 	"strings"
 )
 
-const kuborAnnotationsTransformationName = model.TransformationName("apply-annotations")
+const kuborAnnotationsName = model.TransformationName("apply-annotations")
 
 func init() {
-	Default.MustRegisterUpdateFunc(kuborAnnotationsTransformationName, ensureKuborAnnotationsOnUpdate)
-	Default.MustRegisterCreateFunc(kuborAnnotationsTransformationName, ensureKuborAnnotations)
+	t := ensureKuborAnnotations{}
+	Default.MustRegisterUpdate(&t)
+	Default.MustRegisterCreate(&t)
 }
 
-func ensureKuborAnnotationsOnUpdate(project *model.Project, _ unstructured.Unstructured, target *unstructured.Unstructured, argument *string) error {
-	return ensureKuborAnnotations(project, target, argument)
+type ensureKuborAnnotations struct{}
+
+func (instance *ensureKuborAnnotations) GetName() model.TransformationName {
+	return kuborAnnotationsName
 }
 
-func ensureKuborAnnotations(project *model.Project, target *unstructured.Unstructured, _ *string) error {
-	if err := ensureKuborAnnotationsOfPath(project, target, "metadata", "annotations"); err != nil {
+func (instance *ensureKuborAnnotations) GetPriority() int32 {
+	return 1_000_000_000
+}
+
+func (instance *ensureKuborAnnotations) DefaultEnabled(target *unstructured.Unstructured) bool {
+	return !NamespaceGvks.Contains(model.GroupVersionKind(target.GroupVersionKind()))
+}
+
+func (instance *ensureKuborAnnotations) TransformForUpdate(project *model.Project, _ unstructured.Unstructured, target *unstructured.Unstructured, argument *string) error {
+	return instance.TransformForCreate(project, target, argument)
+}
+
+func (instance *ensureKuborAnnotations) TransformForCreate(project *model.Project, target *unstructured.Unstructured, _ *string) error {
+	if err := instance.ensureOfPath(project, target, "metadata", "annotations"); err != nil {
 		return err
 	}
 	if _, specTemplateExists, err := unstructured.NestedMap(target.Object, "spec", "template"); err != nil || !specTemplateExists {
 		return err
 	}
-	if err := ensureKuborAnnotationsOfPath(project, target, "spec", "template", "metadata", "annotations"); err != nil {
+	if err := instance.ensureOfPath(project, target, "spec", "template", "metadata", "annotations"); err != nil {
 		return err
 	}
 	return nil
 }
 
-func ensureKuborAnnotationsOfPath(project *model.Project, target *unstructured.Unstructured, fields ...string) error {
+func (instance *ensureKuborAnnotations) ensureOfPath(project *model.Project, target *unstructured.Unstructured, fields ...string) error {
 	pa := project.Annotations
 	annotations, _, err := unstructured.NestedStringMap(target.Object, fields...)
 	if err != nil {
@@ -40,24 +55,24 @@ func ensureKuborAnnotationsOfPath(project *model.Project, target *unstructured.U
 		annotations = make(map[string]string)
 	}
 
-	ensureKuborAnnotation(&annotations, pa.Stage)
-	ensureKuborAnnotation(&annotations, pa.ApplyOn)
-	ensureKuborAnnotation(&annotations, pa.DryRunOn)
-	ensureKuborAnnotation(&annotations, pa.WaitUntil)
-	ensureKuborAnnotation(&annotations, pa.CleanupOn)
-	ensureKuborPrefixedAnnotations(&annotations, pa.Transformations)
+	instance.ensureAnnotation(&annotations, pa.Stage)
+	instance.ensureAnnotation(&annotations, pa.ApplyOn)
+	instance.ensureAnnotation(&annotations, pa.DryRunOn)
+	instance.ensureAnnotation(&annotations, pa.WaitUntil)
+	instance.ensureAnnotation(&annotations, pa.CleanupOn)
+	instance.ensurePrefixedAnnotations(&annotations, pa.Transformations)
 
 	return unstructured.SetNestedStringMap(target.Object, annotations, fields...)
 }
 
-func ensureKuborAnnotation(annotations *map[string]string, annotation model.Annotation) {
+func (instance *ensureKuborAnnotations) ensureAnnotation(annotations *map[string]string, annotation model.Annotation) {
 	switch annotation.Action {
 	case model.AnnotationActionDrop:
 		delete(*annotations, string(annotation.Name))
 	}
 }
 
-func ensureKuborPrefixedAnnotations(annotations *map[string]string, annotation model.Annotation) {
+func (instance *ensureKuborAnnotations) ensurePrefixedAnnotations(annotations *map[string]string, annotation model.Annotation) {
 	toHandle := map[string]bool{}
 	for name := range *annotations {
 		if strings.HasPrefix(name, string(annotation.Name)) {

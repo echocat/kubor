@@ -108,7 +108,7 @@ func appendGitlabDiscoveryOfPath(project *model.Project, target *unstructured.Un
 	return unstructured.SetNestedStringMap(target.Object, annotations, fields...)
 }
 func appendGitlabBuildOnUpdate(project *model.Project, _ unstructured.Unstructured, target *unstructured.Unstructured, argument *string) error {
-	return appendGitlabDiscovery(project, target, argument)
+	return appendGitlabBuild(project, target, argument)
 }
 
 func appendGitlabBuild(project *model.Project, target *unstructured.Unstructured, _ *string) error {

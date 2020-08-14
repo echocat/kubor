@@ -7,15 +7,25 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
+const kuborLabelName = model.TransformationName("apply-labels")
+
 func init() {
 	t := ensureKuborLabels{}
-	Default.MustRegisterUpdate("apply-labels", &t)
-	Default.MustRegisterUpdate("apply-labels", &t)
+	Default.MustRegisterUpdate(&t)
+	Default.MustRegisterUpdate(&t)
 }
 
 var NamespaceGvks = model.BuildGroupVersionKinds(v1.SchemeGroupVersion, &v1.Namespace{}).Build()
 
 type ensureKuborLabels struct{}
+
+func (instance *ensureKuborLabels) GetName() model.TransformationName {
+	return kuborLabelName
+}
+
+func (instance *ensureKuborLabels) GetPriority() int32 {
+	return 1_000_000_001
+}
 
 func (instance *ensureKuborLabels) DefaultEnabled(target *unstructured.Unstructured) bool {
 	return !NamespaceGvks.Contains(model.GroupVersionKind(target.GroupVersionKind()))
