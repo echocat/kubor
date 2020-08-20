@@ -14,7 +14,7 @@ func Test_ensureKuborAnnotations_drop(t *testing.T) {
 	project.Annotations.Transformations.Action = model.AnnotationActionDrop
 	project.Annotations.Transformations.Name = "foo-"
 
-	target := unstructured.Unstructured{
+	target := &unstructured.Unstructured{
 		Object: map[string]interface{}{
 			"apiVersion": "v1",
 			"kind":       "ServiceAccount",
@@ -35,7 +35,7 @@ func Test_ensureKuborAnnotations_drop(t *testing.T) {
 		},
 	}
 
-	expectedTarget := unstructured.Unstructured{
+	expectedTarget := &unstructured.Unstructured{
 		Object: map[string]interface{}{
 			"apiVersion": "v1",
 			"kind":       "ServiceAccount",
@@ -54,7 +54,7 @@ func Test_ensureKuborAnnotations_drop(t *testing.T) {
 		},
 	}
 
-	err := testEnsureKuborAnnotations.TransformForCreate(&project, &target, nil)
+	err := testEnsureKuborAnnotations.TransformForCreate(&project, target, nil)
 
 	assert.NoError(t, err)
 	assert.Equal(t, expectedTarget, target)
@@ -65,7 +65,7 @@ func Test_ensureKuborAnnotations_leave(t *testing.T) {
 	project.Annotations.Transformations.Action = model.AnnotationActionLeave
 	project.Annotations.Transformations.Name = "foo-"
 
-	target := unstructured.Unstructured{
+	target := &unstructured.Unstructured{
 		Object: map[string]interface{}{
 			"apiVersion": "v1",
 			"kind":       "ServiceAccount",
@@ -86,7 +86,7 @@ func Test_ensureKuborAnnotations_leave(t *testing.T) {
 		},
 	}
 
-	expectedTarget := unstructured.Unstructured{
+	expectedTarget := &unstructured.Unstructured{
 		Object: map[string]interface{}{
 			"apiVersion": "v1",
 			"kind":       "ServiceAccount",
@@ -107,7 +107,7 @@ func Test_ensureKuborAnnotations_leave(t *testing.T) {
 		},
 	}
 
-	err := testEnsureKuborAnnotations.TransformForCreate(&project, &target, nil)
+	err := testEnsureKuborAnnotations.TransformForCreate(&project, target, nil)
 
 	assert.NoError(t, err)
 	assert.Equal(t, expectedTarget, target)
@@ -118,7 +118,7 @@ func Test_ensureKuborAnnotations_drop_with_spec_template(t *testing.T) {
 	project.Annotations.Transformations.Action = model.AnnotationActionDrop
 	project.Annotations.Transformations.Name = "foo-"
 
-	target := unstructured.Unstructured{
+	target := &unstructured.Unstructured{
 		Object: map[string]interface{}{
 			"apiVersion": "v1",
 			"kind":       "ServiceAccount",
@@ -150,7 +150,7 @@ func Test_ensureKuborAnnotations_drop_with_spec_template(t *testing.T) {
 		},
 	}
 
-	expectedTarget := unstructured.Unstructured{
+	expectedTarget := &unstructured.Unstructured{
 		Object: map[string]interface{}{
 			"apiVersion": "v1",
 			"kind":       "ServiceAccount",
@@ -178,7 +178,7 @@ func Test_ensureKuborAnnotations_drop_with_spec_template(t *testing.T) {
 		},
 	}
 
-	err := testEnsureKuborAnnotations.TransformForCreate(&project, &target, nil)
+	err := testEnsureKuborAnnotations.TransformForCreate(&project, target, nil)
 
 	assert.NoError(t, err)
 	assert.Equal(t, expectedTarget, target)

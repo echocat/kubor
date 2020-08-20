@@ -13,15 +13,15 @@ func Test_preserveResourceVersion_ignores_different_GroupVersionKinds(t *testing
 			"kind":       "Service",
 		},
 	}
-	expectedTarget := unstructured.Unstructured{
+	expectedTarget := &unstructured.Unstructured{
 		Object: map[string]interface{}{
 			"apiVersion": "extensions/v1",
 			"kind":       "Service",
 		},
 	}
-	target := expectedTarget
+	target := expectedTarget.DeepCopy()
 
-	err := preserveResourceVersion(nil, existing, &target, nil)
+	err := preserveResourceVersion(nil, existing, target, nil)
 	assert.NoError(t, err)
 	assert.Equal(t, expectedTarget, target)
 }
@@ -33,10 +33,10 @@ func Test_preserveResourceVersion_ignores_on_non_Service_kind(t *testing.T) {
 			"kind":       "Servicex",
 		},
 	}
-	expectedTarget := existing
-	target := existing
+	expectedTarget := existing.DeepCopy()
+	target := existing.DeepCopy()
 
-	err := preserveResourceVersion(nil, existing, &target, nil)
+	err := preserveResourceVersion(nil, existing, target, nil)
 	assert.NoError(t, err)
 	assert.Equal(t, expectedTarget, target)
 }
@@ -48,10 +48,10 @@ func Test_preserveResourceVersion_ignores_on_non_v1_version(t *testing.T) {
 			"kind":       "Service",
 		},
 	}
-	expectedTarget := existing
-	target := existing
+	expectedTarget := existing.DeepCopy()
+	target := existing.DeepCopy()
 
-	err := preserveResourceVersion(nil, existing, &target, nil)
+	err := preserveResourceVersion(nil, existing, target, nil)
 	assert.NoError(t, err)
 	assert.Equal(t, expectedTarget, target)
 }
@@ -66,20 +66,20 @@ func Test_preserveResourceVersion_ignores_if_original_has_no_resourceVersion(t *
 			},
 		},
 	}
-	expectedTarget := unstructured.Unstructured{
+	expectedTarget := &unstructured.Unstructured{
 		Object: map[string]interface{}{
 			"apiVersion": "v1",
 			"kind":       "Service",
 		},
 	}
-	target := unstructured.Unstructured{
+	target := &unstructured.Unstructured{
 		Object: map[string]interface{}{
 			"apiVersion": "v1",
 			"kind":       "Service",
 		},
 	}
 
-	err := preserveResourceVersion(nil, existing, &target, nil)
+	err := preserveResourceVersion(nil, existing, target, nil)
 	assert.NoError(t, err)
 	assert.Equal(t, expectedTarget, target)
 }
@@ -94,20 +94,20 @@ func Test_preserveResourceVersion_ignores_if_original_resourceVersion_is_not_a_s
 			},
 		},
 	}
-	expectedTarget := unstructured.Unstructured{
+	expectedTarget := &unstructured.Unstructured{
 		Object: map[string]interface{}{
 			"apiVersion": "v1",
 			"kind":       "Service",
 		},
 	}
-	target := unstructured.Unstructured{
+	target := &unstructured.Unstructured{
 		Object: map[string]interface{}{
 			"apiVersion": "v1",
 			"kind":       "Service",
 		},
 	}
 
-	err := preserveResourceVersion(nil, existing, &target, nil)
+	err := preserveResourceVersion(nil, existing, target, nil)
 	assert.NoError(t, err)
 	assert.Equal(t, expectedTarget, target)
 }
@@ -122,15 +122,15 @@ func Test_preserveResourceVersion_set_metadata_and_resourceVersion(t *testing.T)
 			},
 		},
 	}
-	expectedTarget := existing
-	target := unstructured.Unstructured{
+	expectedTarget := existing.DeepCopy()
+	target := &unstructured.Unstructured{
 		Object: map[string]interface{}{
 			"apiVersion": "v1",
 			"kind":       "Service",
 		},
 	}
 
-	err := preserveResourceVersion(nil, existing, &target, nil)
+	err := preserveResourceVersion(nil, existing, target, nil)
 	assert.NoError(t, err)
 	assert.Equal(t, expectedTarget, target)
 }
@@ -145,7 +145,7 @@ func Test_preserveResourceVersion_set_resourceVersion(t *testing.T) {
 			},
 		},
 	}
-	expectedTarget := unstructured.Unstructured{
+	expectedTarget := &unstructured.Unstructured{
 		Object: map[string]interface{}{
 			"apiVersion": "v1",
 			"kind":       "Service",
@@ -155,7 +155,7 @@ func Test_preserveResourceVersion_set_resourceVersion(t *testing.T) {
 			},
 		},
 	}
-	target := unstructured.Unstructured{
+	target := &unstructured.Unstructured{
 		Object: map[string]interface{}{
 			"apiVersion": "v1",
 			"kind":       "Service",
@@ -165,7 +165,7 @@ func Test_preserveResourceVersion_set_resourceVersion(t *testing.T) {
 		},
 	}
 
-	err := preserveResourceVersion(nil, existing, &target, nil)
+	err := preserveResourceVersion(nil, existing, target, nil)
 	assert.NoError(t, err)
 	assert.Equal(t, expectedTarget, target)
 }

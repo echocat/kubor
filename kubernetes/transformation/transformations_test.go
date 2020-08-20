@@ -39,7 +39,7 @@ func TestTransformations_TransformForUpdate_calling_enabled(t *testing.T) {
 			},
 		},
 	}
-	target := unstructured.Unstructured{
+	target := &unstructured.Unstructured{
 		Object: map[string]interface{}{
 			"apiVersion": "v1",
 			"kind":       "ServiceAccount",
@@ -61,7 +61,7 @@ func TestTransformations_TransformForUpdate_calling_enabled(t *testing.T) {
 		},
 	}
 
-	expectedTarget := unstructured.Unstructured{
+	expectedTarget := &unstructured.Unstructured{
 		Object: map[string]interface{}{
 			"apiVersion": "v1",
 			"kind":       "ServiceAccount",
@@ -85,7 +85,7 @@ func TestTransformations_TransformForUpdate_calling_enabled(t *testing.T) {
 		},
 	}
 
-	err := testTransformations.TransformForUpdate(&project, existing, &target)
+	err := testTransformations.TransformForUpdate(&project, existing, target)
 
 	assert.NoError(t, err)
 	assert.Equal(t, expectedTarget, target)
@@ -94,7 +94,7 @@ func TestTransformations_TransformForUpdate_calling_enabled(t *testing.T) {
 func TestTransformations_TransformForCreate_calling_enabled(t *testing.T) {
 	project := model.NewProject()
 
-	target := unstructured.Unstructured{
+	target := &unstructured.Unstructured{
 		Object: map[string]interface{}{
 			"apiVersion": "v1",
 			"kind":       "ServiceAccount",
@@ -116,7 +116,7 @@ func TestTransformations_TransformForCreate_calling_enabled(t *testing.T) {
 		},
 	}
 
-	expectedTarget := unstructured.Unstructured{
+	expectedTarget := &unstructured.Unstructured{
 		Object: map[string]interface{}{
 			"apiVersion": "v1",
 			"kind":       "ServiceAccount",
@@ -140,7 +140,7 @@ func TestTransformations_TransformForCreate_calling_enabled(t *testing.T) {
 		},
 	}
 
-	err := testTransformations.TransformForCreate(&project, &target)
+	err := testTransformations.TransformForCreate(&project, target)
 
 	assert.NoError(t, err)
 	assert.Equal(t, expectedTarget, target)

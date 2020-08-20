@@ -16,7 +16,7 @@ func Test_preserveServiceClusterIps_ignores_different_GroupVersionKinds(t *testi
 			},
 		},
 	}
-	expectedTarget := unstructured.Unstructured{
+	expectedTarget := &unstructured.Unstructured{
 		Object: map[string]interface{}{
 			"apiVersion": "extensions/v1",
 			"kind":       "Service",
@@ -24,7 +24,7 @@ func Test_preserveServiceClusterIps_ignores_different_GroupVersionKinds(t *testi
 	}
 	target := expectedTarget
 
-	err := preserveServiceClusterIps(nil, existing, &target, nil)
+	err := preserveServiceClusterIps(nil, existing, target, nil)
 	assert.NoError(t, err)
 	assert.Equal(t, expectedTarget, target)
 }
@@ -39,7 +39,7 @@ func Test_preserveServiceClusterIps_ignores_on_non_Service_kind(t *testing.T) {
 			},
 		},
 	}
-	expectedTarget := unstructured.Unstructured{
+	expectedTarget := &unstructured.Unstructured{
 		Object: map[string]interface{}{
 			"apiVersion": "v1",
 			"kind":       "Servicex",
@@ -47,7 +47,7 @@ func Test_preserveServiceClusterIps_ignores_on_non_Service_kind(t *testing.T) {
 	}
 	target := expectedTarget
 
-	err := preserveServiceClusterIps(nil, existing, &target, nil)
+	err := preserveServiceClusterIps(nil, existing, target, nil)
 	assert.NoError(t, err)
 	assert.Equal(t, expectedTarget, target)
 }
@@ -62,20 +62,20 @@ func Test_preserveServiceClusterIps_ignores_if_original_has_no_clusterIp(t *test
 			},
 		},
 	}
-	expectedTarget := unstructured.Unstructured{
+	expectedTarget := &unstructured.Unstructured{
 		Object: map[string]interface{}{
 			"apiVersion": "v1",
 			"kind":       "Service",
 		},
 	}
-	target := unstructured.Unstructured{
+	target := &unstructured.Unstructured{
 		Object: map[string]interface{}{
 			"apiVersion": "v1",
 			"kind":       "Service",
 		},
 	}
 
-	err := preserveServiceClusterIps(nil, existing, &target, nil)
+	err := preserveServiceClusterIps(nil, existing, target, nil)
 	assert.NoError(t, err)
 	assert.Equal(t, expectedTarget, target)
 }
@@ -90,15 +90,15 @@ func Test_preserveServiceClusterIps_set_spec_and_clusterIP(t *testing.T) {
 			},
 		},
 	}
-	expectedTarget := existing
-	target := unstructured.Unstructured{
+	expectedTarget := existing.DeepCopy()
+	target := &unstructured.Unstructured{
 		Object: map[string]interface{}{
 			"apiVersion": "v1",
 			"kind":       "Service",
 		},
 	}
 
-	err := preserveServiceClusterIps(nil, existing, &target, nil)
+	err := preserveServiceClusterIps(nil, existing, target, nil)
 	assert.NoError(t, err)
 	assert.Equal(t, expectedTarget, target)
 }
@@ -113,7 +113,7 @@ func Test_preserveServiceClusterIps_does_not_override(t *testing.T) {
 			},
 		},
 	}
-	expectedTarget := unstructured.Unstructured{
+	expectedTarget := &unstructured.Unstructured{
 		Object: map[string]interface{}{
 			"apiVersion": "v1",
 			"kind":       "Service",
@@ -122,7 +122,7 @@ func Test_preserveServiceClusterIps_does_not_override(t *testing.T) {
 			},
 		},
 	}
-	target := unstructured.Unstructured{
+	target := &unstructured.Unstructured{
 		Object: map[string]interface{}{
 			"apiVersion": "v1",
 			"kind":       "Service",
@@ -132,7 +132,7 @@ func Test_preserveServiceClusterIps_does_not_override(t *testing.T) {
 		},
 	}
 
-	err := preserveServiceClusterIps(nil, existing, &target, nil)
+	err := preserveServiceClusterIps(nil, existing, target, nil)
 	assert.NoError(t, err)
 	assert.Equal(t, expectedTarget, target)
 }
@@ -147,7 +147,7 @@ func Test_preserveServiceClusterIps_set_clusterIP(t *testing.T) {
 			},
 		},
 	}
-	expectedTarget := unstructured.Unstructured{
+	expectedTarget := &unstructured.Unstructured{
 		Object: map[string]interface{}{
 			"apiVersion": "v1",
 			"kind":       "Service",
@@ -157,7 +157,7 @@ func Test_preserveServiceClusterIps_set_clusterIP(t *testing.T) {
 			},
 		},
 	}
-	target := unstructured.Unstructured{
+	target := &unstructured.Unstructured{
 		Object: map[string]interface{}{
 			"apiVersion": "v1",
 			"kind":       "Service",
@@ -167,7 +167,7 @@ func Test_preserveServiceClusterIps_set_clusterIP(t *testing.T) {
 		},
 	}
 
-	err := preserveServiceClusterIps(nil, existing, &target, nil)
+	err := preserveServiceClusterIps(nil, existing, target, nil)
 	assert.NoError(t, err)
 	assert.Equal(t, expectedTarget, target)
 }
@@ -182,7 +182,7 @@ func Test_preserveServiceHealthCheckNodePort_ignores_different_GroupVersionKinds
 			},
 		},
 	}
-	expectedTarget := unstructured.Unstructured{
+	expectedTarget := &unstructured.Unstructured{
 		Object: map[string]interface{}{
 			"apiVersion": "extensions/v1",
 			"kind":       "Service",
@@ -190,7 +190,7 @@ func Test_preserveServiceHealthCheckNodePort_ignores_different_GroupVersionKinds
 	}
 	target := expectedTarget
 
-	err := preserveServiceHealthCheckNodePort(nil, existing, &target, nil)
+	err := preserveServiceHealthCheckNodePort(nil, existing, target, nil)
 	assert.NoError(t, err)
 	assert.Equal(t, expectedTarget, target)
 }
@@ -205,7 +205,7 @@ func Test_preserveServiceHealthCheckNodePort_ignores_on_non_Service_kind(t *test
 			},
 		},
 	}
-	expectedTarget := unstructured.Unstructured{
+	expectedTarget := &unstructured.Unstructured{
 		Object: map[string]interface{}{
 			"apiVersion": "v1",
 			"kind":       "Servicex",
@@ -213,7 +213,7 @@ func Test_preserveServiceHealthCheckNodePort_ignores_on_non_Service_kind(t *test
 	}
 	target := expectedTarget
 
-	err := preserveServiceHealthCheckNodePort(nil, existing, &target, nil)
+	err := preserveServiceHealthCheckNodePort(nil, existing, target, nil)
 	assert.NoError(t, err)
 	assert.Equal(t, expectedTarget, target)
 }
@@ -228,20 +228,20 @@ func Test_preserveServiceHealthCheckNodePort_ignores_if_original_has_no_clusterI
 			},
 		},
 	}
-	expectedTarget := unstructured.Unstructured{
+	expectedTarget := &unstructured.Unstructured{
 		Object: map[string]interface{}{
 			"apiVersion": "v1",
 			"kind":       "Service",
 		},
 	}
-	target := unstructured.Unstructured{
+	target := &unstructured.Unstructured{
 		Object: map[string]interface{}{
 			"apiVersion": "v1",
 			"kind":       "Service",
 		},
 	}
 
-	err := preserveServiceHealthCheckNodePort(nil, existing, &target, nil)
+	err := preserveServiceHealthCheckNodePort(nil, existing, target, nil)
 	assert.NoError(t, err)
 	assert.Equal(t, expectedTarget, target)
 }
@@ -256,15 +256,15 @@ func Test_preserveServiceHealthCheckNodePort_set_spec_and_clusterIP(t *testing.T
 			},
 		},
 	}
-	expectedTarget := existing
-	target := unstructured.Unstructured{
+	expectedTarget := existing.DeepCopy()
+	target := &unstructured.Unstructured{
 		Object: map[string]interface{}{
 			"apiVersion": "v1",
 			"kind":       "Service",
 		},
 	}
 
-	err := preserveServiceHealthCheckNodePort(nil, existing, &target, nil)
+	err := preserveServiceHealthCheckNodePort(nil, existing, target, nil)
 	assert.NoError(t, err)
 	assert.Equal(t, expectedTarget, target)
 }
@@ -279,7 +279,7 @@ func Test_preserveServiceHealthCheckNodePort_does_not_override(t *testing.T) {
 			},
 		},
 	}
-	expectedTarget := unstructured.Unstructured{
+	expectedTarget := &unstructured.Unstructured{
 		Object: map[string]interface{}{
 			"apiVersion": "v1",
 			"kind":       "Service",
@@ -288,7 +288,7 @@ func Test_preserveServiceHealthCheckNodePort_does_not_override(t *testing.T) {
 			},
 		},
 	}
-	target := unstructured.Unstructured{
+	target := &unstructured.Unstructured{
 		Object: map[string]interface{}{
 			"apiVersion": "v1",
 			"kind":       "Service",
@@ -298,7 +298,7 @@ func Test_preserveServiceHealthCheckNodePort_does_not_override(t *testing.T) {
 		},
 	}
 
-	err := preserveServiceHealthCheckNodePort(nil, existing, &target, nil)
+	err := preserveServiceHealthCheckNodePort(nil, existing, target, nil)
 	assert.NoError(t, err)
 	assert.Equal(t, expectedTarget, target)
 }
@@ -313,7 +313,7 @@ func Test_preserveServiceHealthCheckNodePort_set_clusterIP(t *testing.T) {
 			},
 		},
 	}
-	expectedTarget := unstructured.Unstructured{
+	expectedTarget := &unstructured.Unstructured{
 		Object: map[string]interface{}{
 			"apiVersion": "v1",
 			"kind":       "Service",
@@ -323,7 +323,7 @@ func Test_preserveServiceHealthCheckNodePort_set_clusterIP(t *testing.T) {
 			},
 		},
 	}
-	target := unstructured.Unstructured{
+	target := &unstructured.Unstructured{
 		Object: map[string]interface{}{
 			"apiVersion": "v1",
 			"kind":       "Service",
@@ -333,7 +333,7 @@ func Test_preserveServiceHealthCheckNodePort_set_clusterIP(t *testing.T) {
 		},
 	}
 
-	err := preserveServiceHealthCheckNodePort(nil, existing, &target, nil)
+	err := preserveServiceHealthCheckNodePort(nil, existing, target, nil)
 	assert.NoError(t, err)
 	assert.Equal(t, expectedTarget, target)
 }
@@ -359,7 +359,7 @@ func Test_preserveServiceNodePorts_ignores_different_GroupVersionKinds(t *testin
 			},
 		},
 	}
-	expectedTarget := unstructured.Unstructured{
+	expectedTarget := &unstructured.Unstructured{
 		Object: map[string]interface{}{
 			"apiVersion": "extensions/v1",
 			"kind":       "Service",
@@ -367,7 +367,7 @@ func Test_preserveServiceNodePorts_ignores_different_GroupVersionKinds(t *testin
 	}
 	target := expectedTarget
 
-	err := preserveServiceNodePorts(nil, existing, &target, nil)
+	err := preserveServiceNodePorts(nil, existing, target, nil)
 	assert.NoError(t, err)
 	assert.Equal(t, expectedTarget, target)
 }
@@ -393,7 +393,7 @@ func Test_preserveServiceNodePorts_ignores_on_non_Service_kind(t *testing.T) {
 			},
 		},
 	}
-	expectedTarget := unstructured.Unstructured{
+	expectedTarget := &unstructured.Unstructured{
 		Object: map[string]interface{}{
 			"apiVersion": "v1",
 			"kind":       "Servicex",
@@ -401,7 +401,7 @@ func Test_preserveServiceNodePorts_ignores_on_non_Service_kind(t *testing.T) {
 	}
 	target := expectedTarget
 
-	err := preserveServiceNodePorts(nil, existing, &target, nil)
+	err := preserveServiceNodePorts(nil, existing, target, nil)
 	assert.NoError(t, err)
 	assert.Equal(t, expectedTarget, target)
 }
@@ -425,20 +425,20 @@ func Test_preserveServiceNodePorts_ignores_if_original_has_no_nodePort(t *testin
 			},
 		},
 	}
-	expectedTarget := unstructured.Unstructured{
+	expectedTarget := &unstructured.Unstructured{
 		Object: map[string]interface{}{
 			"apiVersion": "v1",
 			"kind":       "Service",
 		},
 	}
-	target := unstructured.Unstructured{
+	target := &unstructured.Unstructured{
 		Object: map[string]interface{}{
 			"apiVersion": "v1",
 			"kind":       "Service",
 		},
 	}
 
-	err := preserveServiceNodePorts(nil, existing, &target, nil)
+	err := preserveServiceNodePorts(nil, existing, target, nil)
 	assert.NoError(t, err)
 	assert.Equal(t, expectedTarget, target)
 }
@@ -464,7 +464,7 @@ func Test_preserveServiceNodePorts_set(t *testing.T) {
 			},
 		},
 	}
-	expectedTarget := unstructured.Unstructured{
+	expectedTarget := &unstructured.Unstructured{
 		Object: map[string]interface{}{
 			"apiVersion": "v1",
 			"kind":       "Service",
@@ -484,7 +484,7 @@ func Test_preserveServiceNodePorts_set(t *testing.T) {
 			},
 		},
 	}
-	target := unstructured.Unstructured{
+	target := &unstructured.Unstructured{
 		Object: map[string]interface{}{
 			"apiVersion": "v1",
 			"kind":       "Service",
@@ -504,7 +504,7 @@ func Test_preserveServiceNodePorts_set(t *testing.T) {
 		},
 	}
 
-	err := preserveServiceNodePorts(nil, existing, &target, nil)
+	err := preserveServiceNodePorts(nil, existing, target, nil)
 	assert.NoError(t, err)
 	assert.Equal(t, expectedTarget, target)
 }

@@ -12,7 +12,7 @@ func Test_appendGitlabDiscovery_append(t *testing.T) {
 	project.Env[gitlabEnvProjectPathSlug] = "/project-slug"
 	project.Env[gitlabEnvEnvironmentSlug] = "/environment-slug"
 
-	target := unstructured.Unstructured{
+	target := &unstructured.Unstructured{
 		Object: map[string]interface{}{
 			"apiVersion": "apps/v1",
 			"kind":       "Deployment",
@@ -33,7 +33,7 @@ func Test_appendGitlabDiscovery_append(t *testing.T) {
 		},
 	}
 
-	expectedTarget := unstructured.Unstructured{
+	expectedTarget := &unstructured.Unstructured{
 		Object: map[string]interface{}{
 			"apiVersion": "apps/v1",
 			"kind":       "Deployment",
@@ -58,7 +58,7 @@ func Test_appendGitlabDiscovery_append(t *testing.T) {
 		},
 	}
 
-	err := appendGitlabDiscovery(&project, &target, nil)
+	err := appendGitlabDiscovery(&project, target, nil)
 
 	assert.NoError(t, err)
 	assert.Equal(t, expectedTarget, target)
@@ -67,7 +67,7 @@ func Test_appendGitlabDiscovery_append(t *testing.T) {
 func Test_appendGitlabDiscovery_does_not_append_if_env_absent(t *testing.T) {
 	project := model.NewProject()
 
-	target := unstructured.Unstructured{
+	target := &unstructured.Unstructured{
 		Object: map[string]interface{}{
 			"apiVersion": "apps/v1",
 			"kind":       "Deployment",
@@ -88,7 +88,7 @@ func Test_appendGitlabDiscovery_does_not_append_if_env_absent(t *testing.T) {
 		},
 	}
 
-	expectedTarget := unstructured.Unstructured{
+	expectedTarget := &unstructured.Unstructured{
 		Object: map[string]interface{}{
 			"apiVersion": "apps/v1",
 			"kind":       "Deployment",
@@ -109,7 +109,7 @@ func Test_appendGitlabDiscovery_does_not_append_if_env_absent(t *testing.T) {
 		},
 	}
 
-	err := appendGitlabDiscovery(&project, &target, nil)
+	err := appendGitlabDiscovery(&project, target, nil)
 
 	assert.NoError(t, err)
 	assert.Equal(t, expectedTarget, target)
@@ -122,7 +122,7 @@ func Test_appendGitlabBuild_append(t *testing.T) {
 	project.Env[gitlabEnvRunnerId] = "runner3"
 	project.Env[gitlabEnvProjectUrl] = "https://foo.bar"
 
-	target := unstructured.Unstructured{
+	target := &unstructured.Unstructured{
 		Object: map[string]interface{}{
 			"apiVersion": "apps/v1",
 			"kind":       "Deployment",
@@ -143,7 +143,7 @@ func Test_appendGitlabBuild_append(t *testing.T) {
 		},
 	}
 
-	expectedTarget := unstructured.Unstructured{
+	expectedTarget := &unstructured.Unstructured{
 		Object: map[string]interface{}{
 			"apiVersion": "apps/v1",
 			"kind":       "Deployment",
@@ -172,7 +172,7 @@ func Test_appendGitlabBuild_append(t *testing.T) {
 		},
 	}
 
-	err := appendGitlabBuild(&project, &target, nil)
+	err := appendGitlabBuild(&project, target, nil)
 
 	assert.NoError(t, err)
 	assert.Equal(t, expectedTarget, target)
@@ -181,7 +181,7 @@ func Test_appendGitlabBuild_append(t *testing.T) {
 func Test_appendGitlabBuild_does_not_append_if_env_absent(t *testing.T) {
 	project := model.NewProject()
 
-	target := unstructured.Unstructured{
+	target := &unstructured.Unstructured{
 		Object: map[string]interface{}{
 			"apiVersion": "apps/v1",
 			"kind":       "Deployment",
@@ -202,7 +202,7 @@ func Test_appendGitlabBuild_does_not_append_if_env_absent(t *testing.T) {
 		},
 	}
 
-	expectedTarget := unstructured.Unstructured{
+	expectedTarget := &unstructured.Unstructured{
 		Object: map[string]interface{}{
 			"apiVersion": "apps/v1",
 			"kind":       "Deployment",
@@ -223,7 +223,7 @@ func Test_appendGitlabBuild_does_not_append_if_env_absent(t *testing.T) {
 		},
 	}
 
-	err := appendGitlabBuild(&project, &target, nil)
+	err := appendGitlabBuild(&project, target, nil)
 
 	assert.NoError(t, err)
 	assert.Equal(t, expectedTarget, target)

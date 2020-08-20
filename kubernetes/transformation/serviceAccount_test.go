@@ -13,15 +13,15 @@ func Test_preserveServiceAccountSecrets_ignores_different_GroupVersionKinds(t *t
 			"kind":       "ServiceAccount",
 		},
 	}
-	expectedTarget := unstructured.Unstructured{
+	expectedTarget := &unstructured.Unstructured{
 		Object: map[string]interface{}{
 			"apiVersion": "v1beta1",
 			"kind":       "ServiceAccount",
 		},
 	}
-	target := expectedTarget
+	target := expectedTarget.DeepCopy()
 
-	err := preserveServiceAccountSecrets(nil, existing, &target, nil)
+	err := preserveServiceAccountSecrets(nil, existing, target, nil)
 	assert.NoError(t, err)
 	assert.Equal(t, expectedTarget, target)
 }
@@ -33,10 +33,10 @@ func Test_preserveServiceAccountSecrets_ignores_on_non_ServiceAccount_kind(t *te
 			"kind":       "ServiceAccountx",
 		},
 	}
-	expectedTarget := existing
-	target := existing
+	expectedTarget := existing.DeepCopy()
+	target := existing.DeepCopy()
 
-	err := preserveServiceAccountSecrets(nil, existing, &target, nil)
+	err := preserveServiceAccountSecrets(nil, existing, target, nil)
 	assert.NoError(t, err)
 	assert.Equal(t, expectedTarget, target)
 }
@@ -55,7 +55,7 @@ func Test_preserveServiceAccountSecrets_ignores_if_target_has_already_secrets(t 
 			},
 		},
 	}
-	expectedTarget := unstructured.Unstructured{
+	expectedTarget := &unstructured.Unstructured{
 		Object: map[string]interface{}{
 			"apiVersion": "v1",
 			"kind":       "ServiceAccount",
@@ -68,9 +68,9 @@ func Test_preserveServiceAccountSecrets_ignores_if_target_has_already_secrets(t 
 			},
 		},
 	}
-	target := expectedTarget
+	target := expectedTarget.DeepCopy()
 
-	err := preserveServiceAccountSecrets(nil, existing, &target, nil)
+	err := preserveServiceAccountSecrets(nil, existing, target, nil)
 	assert.NoError(t, err)
 	assert.Equal(t, expectedTarget, target)
 }
@@ -87,7 +87,7 @@ func Test_preserveServiceAccountSecrets_ignores_if_target_has_already_imagePullS
 			},
 		},
 	}
-	expectedTarget := unstructured.Unstructured{
+	expectedTarget := &unstructured.Unstructured{
 		Object: map[string]interface{}{
 			"apiVersion": "v1",
 			"kind":       "ServiceAccount",
@@ -100,7 +100,7 @@ func Test_preserveServiceAccountSecrets_ignores_if_target_has_already_imagePullS
 	}
 	target := expectedTarget
 
-	err := preserveServiceAccountSecrets(nil, existing, &target, nil)
+	err := preserveServiceAccountSecrets(nil, existing, target, nil)
 	assert.NoError(t, err)
 	assert.Equal(t, expectedTarget, target)
 }
@@ -119,7 +119,7 @@ func Test_preserveServiceAccountSecrets_applies_secrets(t *testing.T) {
 			},
 		},
 	}
-	expectedTarget := unstructured.Unstructured{
+	expectedTarget := &unstructured.Unstructured{
 		Object: map[string]interface{}{
 			"apiVersion": "v1",
 			"kind":       "ServiceAccount",
@@ -133,14 +133,14 @@ func Test_preserveServiceAccountSecrets_applies_secrets(t *testing.T) {
 			"imagePullSecrets": []interface{}(nil),
 		},
 	}
-	target := unstructured.Unstructured{
+	target := &unstructured.Unstructured{
 		Object: map[string]interface{}{
 			"apiVersion": "v1",
 			"kind":       "ServiceAccount",
 		},
 	}
 
-	err := preserveServiceAccountSecrets(nil, existing, &target, nil)
+	err := preserveServiceAccountSecrets(nil, existing, target, nil)
 	assert.NoError(t, err)
 	assert.Equal(t, expectedTarget, target)
 }
@@ -157,7 +157,7 @@ func Test_preserveServiceAccountSecrets_applies_imagePullSecrets(t *testing.T) {
 			},
 		},
 	}
-	expectedTarget := unstructured.Unstructured{
+	expectedTarget := &unstructured.Unstructured{
 		Object: map[string]interface{}{
 			"apiVersion": "v1",
 			"kind":       "ServiceAccount",
@@ -169,14 +169,14 @@ func Test_preserveServiceAccountSecrets_applies_imagePullSecrets(t *testing.T) {
 			},
 		},
 	}
-	target := unstructured.Unstructured{
+	target := &unstructured.Unstructured{
 		Object: map[string]interface{}{
 			"apiVersion": "v1",
 			"kind":       "ServiceAccount",
 		},
 	}
 
-	err := preserveServiceAccountSecrets(nil, existing, &target, nil)
+	err := preserveServiceAccountSecrets(nil, existing, target, nil)
 	assert.NoError(t, err)
 	assert.Equal(t, expectedTarget, target)
 }
