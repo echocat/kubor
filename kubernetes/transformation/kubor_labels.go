@@ -12,7 +12,7 @@ const kuborLabelName = model.TransformationName("apply-labels")
 func init() {
 	t := ensureKuborLabels{}
 	Default.MustRegisterUpdate(&t)
-	Default.MustRegisterUpdate(&t)
+	Default.MustRegisterCreate(&t)
 }
 
 var NamespaceGvks = model.BuildGroupVersionKinds(v1.SchemeGroupVersion, &v1.Namespace{}).Build()
