@@ -36,7 +36,7 @@ func (instance *ensureKuborAnnotations) TransformForCreate(project *model.Projec
 	if err := instance.ensureOfPath(project, target, "metadata", "annotations"); err != nil {
 		return err
 	}
-	if _, specTemplateExists, err := unstructured.NestedMap(target.Object, "spec", "template"); err != nil || !specTemplateExists {
+	if _, specTemplateExists, err := NestedMap(target.Object, "spec", "template"); err != nil || !specTemplateExists {
 		return err
 	}
 	if err := instance.ensureOfPath(project, target, "spec", "template", "metadata", "annotations"); err != nil {
@@ -47,7 +47,7 @@ func (instance *ensureKuborAnnotations) TransformForCreate(project *model.Projec
 
 func (instance *ensureKuborAnnotations) ensureOfPath(project *model.Project, target *unstructured.Unstructured, fields ...string) error {
 	pa := project.Annotations
-	annotations, _, err := unstructured.NestedStringMap(target.Object, fields...)
+	annotations, _, err := NestedStringMap(target.Object, fields...)
 	if err != nil {
 		return err
 	}

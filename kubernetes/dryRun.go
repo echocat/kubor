@@ -1,10 +1,11 @@
 package kubernetes
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"github.com/echocat/kubor/model"
-	"github.com/googleapis/gnostic/OpenAPIv2"
+	"github.com/googleapis/gnostic/openapiv2"
 	"gopkg.in/yaml.v2"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -94,7 +95,7 @@ func crdFromDynamic(client dynamic.Interface) ([]schema.GroupKind, error) {
 		Group:    "apiextensions.k8s.io",
 		Version:  "v1beta1",
 		Resource: "customresourcedefinitions",
-	}).List(metav1.ListOptions{})
+	}).List(context.Background(), metav1.ListOptions{})
 	if err != nil {
 		return nil, fmt.Errorf("failed to list CRDs: %w", err)
 	}

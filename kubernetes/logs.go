@@ -93,7 +93,7 @@ func (instance *PodLogProvider) Open() (io.ReadCloser, error) {
 			Container: instance.container,
 		}, scheme.ParameterCodec)
 
-	result, err := req.Stream()
+	result, err := req.Stream(context.Background())
 	if err != nil {
 		if ass, ok := err.(errors.APIStatus); ok {
 			status := ass.Status()

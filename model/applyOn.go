@@ -63,7 +63,7 @@ func (instance *ApplyOn) UnmarshalText(text []byte) error {
 		*instance = ApplyOnAlways
 		return nil
 	case "false", "disabled", "off":
-		*instance = ApplyOnAlways
+		*instance = ApplyOnNever
 		return nil
 	}
 

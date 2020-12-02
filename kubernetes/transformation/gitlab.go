@@ -83,7 +83,7 @@ func appendGitlabDiscovery(project *model.Project, target *unstructured.Unstruct
 }
 
 func appendGitlabDiscoveryOfPath(project *model.Project, target *unstructured.Unstructured, fields ...string) error {
-	annotations, _, err := unstructured.NestedStringMap(target.Object, fields...)
+	annotations, _, err := NestedStringMap(target.Object, fields...)
 	if err != nil {
 		return err
 	}
@@ -116,7 +116,7 @@ func appendGitlabBuild(project *model.Project, target *unstructured.Unstructured
 		return err
 	}
 
-	if _, specTemplateExists, err := unstructured.NestedMap(target.Object, "spec", "template"); err != nil || !specTemplateExists {
+	if _, specTemplateExists, err := NestedMap(target.Object, "spec", "template"); err != nil || !specTemplateExists {
 		return err
 	}
 	if err := appendGitlabBuildOfPath(project, target, "spec", "template", "metadata", "annotations"); err != nil {
@@ -127,7 +127,7 @@ func appendGitlabBuild(project *model.Project, target *unstructured.Unstructured
 }
 
 func appendGitlabBuildOfPath(project *model.Project, target *unstructured.Unstructured, fields ...string) error {
-	annotations, _, err := unstructured.NestedStringMap(target.Object, fields...)
+	annotations, _, err := NestedStringMap(target.Object, fields...)
 	if err != nil {
 		return err
 	}

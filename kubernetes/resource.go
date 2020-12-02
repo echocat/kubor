@@ -1,6 +1,7 @@
 package kubernetes
 
 import (
+	"context"
 	"fmt"
 	"github.com/echocat/kubor/kubernetes/transformation"
 	"github.com/echocat/kubor/model"
@@ -61,7 +62,7 @@ func (instance ObjectResource) Create(options *metav1.CreateOptions, subresource
 		options = &metav1.CreateOptions{}
 	}
 	options.TypeMeta = instance.TypeMeta
-	result, err := instance.Resource.Create(instance.Object, *options, subresources...)
+	result, err := instance.Resource.Create(context.Background(), instance.Object, *options, subresources...)
 	return result, OptimizeError(err)
 }
 
@@ -70,7 +71,7 @@ func (instance ObjectResource) Update(options *metav1.UpdateOptions, subresource
 		options = &metav1.UpdateOptions{}
 	}
 	options.TypeMeta = instance.TypeMeta
-	result, err := instance.Resource.Update(instance.Object, *options, subresources...)
+	result, err := instance.Resource.Update(context.Background(), instance.Object, *options, subresources...)
 	return result, OptimizeError(err)
 }
 
@@ -79,7 +80,7 @@ func (instance ObjectResource) Delete(options *metav1.DeleteOptions, subresource
 		options = &metav1.DeleteOptions{}
 	}
 	options.TypeMeta = instance.TypeMeta
-	err := instance.Resource.Delete(instance.Name.String(), options, subresources...)
+	err := instance.Resource.Delete(context.Background(), instance.Name.String(), *options, subresources...)
 	return OptimizeError(err)
 }
 
@@ -88,7 +89,7 @@ func (instance ObjectResource) Get(options *metav1.GetOptions, subresources ...s
 		options = &metav1.GetOptions{}
 	}
 	options.TypeMeta = instance.TypeMeta
-	result, err := instance.Resource.Get(instance.Name.String(), *options, subresources...)
+	result, err := instance.Resource.Get(context.Background(), instance.Name.String(), *options, subresources...)
 	return result, OptimizeError(err)
 }
 
@@ -99,6 +100,6 @@ func (instance ObjectResource) Watch(options *metav1.ListOptions) (watch.Interfa
 	options.TypeMeta = instance.TypeMeta
 	options.Watch = true
 	options.FieldSelector = fmt.Sprintf("metadata.name=%v", instance.Name)
-	result, err := instance.Resource.Watch(*options)
+	result, err := instance.Resource.Watch(context.Background(), *options)
 	return result, OptimizeError(err)
 }

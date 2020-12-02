@@ -1,7 +1,7 @@
 package kubernetes
 
 import (
-	"github.com/googleapis/gnostic/OpenAPIv2"
+	"github.com/googleapis/gnostic/openapiv2"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/discovery"

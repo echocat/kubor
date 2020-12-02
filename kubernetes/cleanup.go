@@ -1,6 +1,7 @@
 package kubernetes
 
 import (
+	"context"
 	"fmt"
 	"github.com/echocat/kubor/log"
 	"github.com/echocat/kubor/model"
@@ -116,7 +117,7 @@ func (instance *CleanupTask) executeFor(l log.Logger, namespace model.Namespace,
 		LabelSelector: labelSelector,
 	}
 	for {
-		list, err := resource.List(opts)
+		list, err := resource.List(context.Background(), opts)
 		if err != nil {
 			if as, ok := err.(errors.APIStatus); ok && as.Status().Code == 404 {
 				return false, nil
@@ -212,7 +213,7 @@ func (instance *CleanupTask) delete(resource dynamic.ResourceInterface, referenc
 	l.Debug("Deleting %v %v...", instance.mode.AffectedDescription(false, false), reference)
 
 	dp := metav1.DeletePropagationForeground
-	if err := resource.Delete(reference.Name.String(), &metav1.DeleteOptions{
+	if err := resource.Delete(context.Background(), reference.Name.String(), metav1.DeleteOptions{
 		PropagationPolicy: &dp,
 	}); err != nil {
 		return fmt.Errorf("cannot delete %v: %w", instance.mode.AffectedDescription(false, false), err)
@@ -258,7 +259,7 @@ func (instance *CleanupTask) getNamespaces() (result model.Namespaces, err error
 	})
 	opts := metav1.ListOptions{}
 	for {
-		list, err := resource.List(opts)
+		list, err := resource.List(context.Background(), opts)
 		if err != nil {
 			return nil, fmt.Errorf("cannot collect all existing namespaces: %w", err)
 		}

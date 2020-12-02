@@ -47,7 +47,7 @@ func (instance *ensureKuborLabels) TransformForCreate(project *model.Project, ta
 
 func (instance ensureKuborLabels) ensureKuborLabelsOfPath(project *model.Project, target *unstructured.Unstructured, fields ...string) error {
 	pl := project.Labels
-	labels, _, err := unstructured.NestedStringMap(target.Object, fields...)
+	labels, _, err := NestedStringMap(target.Object, fields...)
 	if err != nil {
 		return err
 	}

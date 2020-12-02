@@ -8,40 +8,6 @@ import (
 	"strings"
 )
 
-func groupVersionKindMatchesVersion(what runtime.Object, candidates ...string) bool {
-	if what == nil {
-		return false
-	}
-	kind := what.GetObjectKind()
-	if kind == nil {
-		return false
-	}
-	target := strings.ToLower(kind.GroupVersionKind().Version)
-	for _, candidate := range candidates {
-		if strings.ToLower(candidate) == target {
-			return true
-		}
-	}
-	return false
-}
-
-func groupVersionKindMatchesKind(what runtime.Object, candidates ...string) bool {
-	if what == nil {
-		return false
-	}
-	kind := what.GetObjectKind()
-	if kind == nil {
-		return false
-	}
-	target := strings.ToLower(kind.GroupVersionKind().Kind)
-	for _, candidate := range candidates {
-		if strings.ToLower(candidate) == target {
-			return true
-		}
-	}
-	return false
-}
-
 func groupVersionKindMatches(left, right runtime.Object) bool {
 	if left == nil || right == nil {
 		return false
@@ -63,6 +29,37 @@ func groupVersionKindMatches(left, right runtime.Object) bool {
 		return false
 	}
 	return true
+}
+
+func NestedStringMap(obj map[string]interface{}, fields ...string) (map[string]string, bool, error) {
+	result, found, err := unstructured.NestedStringMap(obj, fields...)
+	if err != nil {
+		if isNullAnnotationsMapError(err) {
+			return nil, false, nil
+		} else {
+			return nil, false, err
+		}
+	}
+	return result, found, nil
+}
+
+func NestedMap(obj map[string]interface{}, fields ...string) (map[string]interface{}, bool, error) {
+	result, found, err := unstructured.NestedMap(obj, fields...)
+	if err != nil {
+		if isNullAnnotationsMapError(err) {
+			return nil, false, nil
+		} else {
+			return nil, false, err
+		}
+	}
+	return result, found, nil
+}
+
+func isNullAnnotationsMapError(candidate error) bool {
+	if candidate == nil {
+		return false
+	}
+	return strings.Contains(candidate.Error(), "<nil> is of the type <nil>, expected map[string]interface{}")
 }
 
 func NestedNamedSliceAsMaps(obj map[string]interface{}, nameField string, fields ...string) (result map[string]map[string]interface{}, found bool, err error) {

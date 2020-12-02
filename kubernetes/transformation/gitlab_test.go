@@ -64,6 +64,57 @@ func Test_appendGitlabDiscovery_append(t *testing.T) {
 	assert.Equal(t, expectedTarget, target)
 }
 
+func Test_appendGitlabDiscovery_appendOnNilAnnotations(t *testing.T) {
+	project := model.NewProject()
+	project.Env[gitlabEnvProjectPathSlug] = "/project-slug"
+	project.Env[gitlabEnvEnvironmentSlug] = "/environment-slug"
+
+	target := &unstructured.Unstructured{
+		Object: map[string]interface{}{
+			"apiVersion": "apps/v1",
+			"kind":       "Deployment",
+			"metadata": map[string]interface{}{
+				"annotations": nil,
+			},
+			"spec": map[string]interface{}{
+				"template": map[string]interface{}{
+					"metadata": map[string]interface{}{
+						"annotations": nil,
+					},
+				},
+			},
+		},
+	}
+
+	expectedTarget := &unstructured.Unstructured{
+		Object: map[string]interface{}{
+			"apiVersion": "apps/v1",
+			"kind":       "Deployment",
+			"metadata": map[string]interface{}{
+				"annotations": map[string]interface{}{
+					gitlabAnnotationApp: "/project-slug",
+					gitlabAnnotationEnv: "/environment-slug",
+				},
+			},
+			"spec": map[string]interface{}{
+				"template": map[string]interface{}{
+					"metadata": map[string]interface{}{
+						"annotations": map[string]interface{}{
+							gitlabAnnotationApp: "/project-slug",
+							gitlabAnnotationEnv: "/environment-slug",
+						},
+					},
+				},
+			},
+		},
+	}
+
+	err := appendGitlabDiscovery(&project, target, nil)
+
+	assert.NoError(t, err)
+	assert.Equal(t, expectedTarget, target)
+}
+
 func Test_appendGitlabDiscovery_does_not_append_if_env_absent(t *testing.T) {
 	project := model.NewProject()
 
