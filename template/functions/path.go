@@ -3,7 +3,6 @@ package functions
 import (
 	"fmt"
 	"github.com/echocat/kubor/template"
-	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
@@ -115,7 +114,7 @@ var FuncReadFile = Function{
 }.MustWithFunc(func(context template.ExecutionContext, file string) (string, error) {
 	if resolved, err := resolvePathOfContext(context, file); err != nil {
 		return "", fmt.Errorf("cannot resolve path of '%s': %w", file, err)
-	} else if b, err := ioutil.ReadFile(resolved); err != nil {
+	} else if b, err := os.ReadFile(resolved); err != nil {
 		return "", fmt.Errorf("cannot read path '%s' (source:%s ): %w", resolved, file, err)
 	} else {
 		return string(b), nil

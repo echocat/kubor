@@ -3,14 +3,15 @@ package kubernetes
 import (
 	"context"
 	"fmt"
-	"github.com/echocat/kubor/log"
 	"github.com/echocat/kubor/model"
+	"github.com/echocat/slf4g"
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/dynamic"
-	"strings"
 	"time"
 )
 
@@ -49,13 +50,13 @@ func (instance *CleanupTask) Execute() error {
 }
 
 func (instance *CleanupTask) ExecuteIn(namespace model.Namespace) (err error) {
-	l := log.WithField("namespace", namespace).
-		WithField("mode", instance.mode)
+	l := log.With("namespace", namespace).
+		With("mode", instance.mode)
 
 	start := time.Now()
 
 	defer func() {
-		l = l.WithField("duration", time.Now().Sub(start))
+		l = l.With("duration", time.Now().Sub(start))
 		if err != nil {
 			if l.IsDebugEnabled() {
 				l.WithError(err).Debug("Cleanup namespace %v if required... FAILED!", namespace)
@@ -95,12 +96,12 @@ func (instance *CleanupTask) ExecuteIn(namespace model.Namespace) (err error) {
 }
 
 func (instance *CleanupTask) executeFor(l log.Logger, namespace model.Namespace, gvk model.GroupVersionKind) (foundAtLeastOne bool, err error) {
-	l = l.WithField("gvk", gvk)
+	l = l.With("gvk", gvk)
 
 	start := time.Now()
 
 	defer func() {
-		l = l.WithField("duration", time.Now().Sub(start))
+		l = l.With("duration", time.Now().Sub(start))
 		if err != nil {
 			l.WithError(err).Trace("Check %v in %v if resources needs to be removed... FAILED!", gvk, namespace)
 		} else {
@@ -130,19 +131,19 @@ func (instance *CleanupTask) executeFor(l log.Logger, namespace model.Namespace,
 			reference, err := GetObjectReference(&candidate, instance.project.Scheme)
 			if err != nil {
 				l.WithError(err).
-					WithField("reference", fmt.Sprintf("%v %v/%v", candidate.GroupVersionKind(), candidate.GetName(), candidate.GetNamespace())).
+					With("reference", fmt.Sprintf("%v %v/%v", candidate.GroupVersionKind(), candidate.GetName(), candidate.GetNamespace())).
 					Warn("Cannot evaluate %v. Skipping it...", instance.mode.AffectedDescription(false, false))
 				continue
 			}
 
 			if instance.shouldBeKept(reference) {
-				l.WithField("reference", reference).
+				l.With("reference", reference).
 					Trace("%v %v is part of the deployment and will be kept.", instance.mode.AffectedDescription(false, true), reference)
 				continue
 			}
 
 			if instance.hasOwner(&candidate) {
-				l.WithField("reference", reference).
+				l.With("reference", reference).
 					Trace("%v %v has an owner and will therefore be kept.", instance.mode.AffectedDescription(false, true), reference)
 				continue
 			}
@@ -150,7 +151,7 @@ func (instance *CleanupTask) executeFor(l log.Logger, namespace model.Namespace,
 			if allowedToBeDeleted, err := instance.isAllowedToBeDeleted(&candidate); err != nil {
 				return false, err
 			} else if !allowedToBeDeleted {
-				l.WithField("reference", reference).
+				l.With("reference", reference).
 					Trace("%v %v is not allowed to be deleted in mode %v and will therefore be kept.",
 						instance.mode.AffectedDescription(false, true), reference, instance.mode)
 				continue
@@ -187,21 +188,21 @@ func (instance *CleanupTask) shouldBeKept(reference model.ObjectReference) bool 
 func (instance *CleanupTask) delete(resource dynamic.ResourceInterface, reference model.ObjectReference) (err error) {
 	start := time.Now()
 	l := log.
-		WithField("action", "delete")
+		With("action", "delete")
 
 	defer func() {
-		ld := l.WithField("duration", time.Now().Sub(start))
+		ld := l.With("duration", time.Now().Sub(start))
 		if err != nil {
 			ldd := ld.
 				WithError(err).
-				WithField("status", "failed")
+				With("status", "failed")
 			if ldd.IsDebugEnabled() {
 				ldd.Error("Deleting %v %v... FAILED!", instance.mode.AffectedDescription(false, false), reference)
 			} else {
 				ldd.Error("Was not able to delete %v %v.", instance.mode.AffectedDescription(false, false), reference)
 			}
 		} else {
-			ldd := ld.WithField("status", "success")
+			ldd := ld.With("status", "success")
 			if ldd.IsDebugEnabled() {
 				ldd.Info("Deleting %v %v... DONE!", instance.mode.AffectedDescription(false, false), reference)
 			} else {
@@ -349,7 +350,7 @@ func (instance CleanupMode) String() string {
 func (instance CleanupMode) AffectedDescription(plural bool, capitalize bool) (result string) {
 	defer func() {
 		if capitalize {
-			result = strings.Title(result)
+			result = cases.Title(language.AmericanEnglish).String(result)
 		}
 	}()
 

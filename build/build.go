@@ -4,7 +4,6 @@ import (
 	"encoding/base64"
 	"fmt"
 	"github.com/alecthomas/kingpin"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -41,11 +40,11 @@ func init() {
 	windowsScript = "%s"
 }
 `, loadFileAsBase64("wrapper/kuborw"), loadFileAsBase64("wrapper/kuborw.cmd")))
-	must(ioutil.WriteFile("wrapper/resources_tmp.go", b, 0644))
+	must(os.WriteFile("wrapper/resources_tmp.go", b, 0644))
 }
 
 func loadFile(source string) []byte {
-	b, err := ioutil.ReadFile(source)
+	b, err := os.ReadFile(source)
 	must(err)
 	return b
 }
@@ -66,7 +65,7 @@ func buildBinary(branch, commit string, t target, forTesting bool) {
 	outputName := t.outputName()
 	must(os.MkdirAll(filepath.Dir(outputName), 0755))
 	executeTo(func(cmd *exec.Cmd) {
-		cmd.Env = append(os.Environ(), "GOOS="+t.os, "GOARCH="+t.arch)
+		cmd.Env = append(os.Environ(), "GOOS="+t.os, "GOARCH="+t.arch, "CGO_ENABLED=0")
 	}, os.Stderr, os.Stdout, "go", "build", "-ldflags", ldFlags, "-o", outputName, "./main")
 }
 
@@ -97,7 +96,7 @@ func buildDocker(branch string, v dockerVariant, buildResources bool, forTesting
 	if forTesting {
 		version = "TEST" + version + "TEST"
 	}
-	execute("docker", "build", "-t", v.imageName(version), "-f", v.dockerFile, "--build-arg", "image="+imagePrefix, "--build-arg", "version="+version, ".")
+	execute(dockerCommand, "build", "-t", v.imageName(version), "-f", v.dockerFile, "--build-arg", "image="+imagePrefix, "--build-arg", "version="+version, ".")
 }
 
 func tagDockers(branch string) {
@@ -129,14 +128,13 @@ func tagDocker(branch string, v dockerVariant, forTesting bool) {
 }
 
 func tagDockerWith(branch string, v dockerVariant, tag string) {
-	execute("docker", "tag", v.imageName(branch), tag)
+	execute(dockerCommand, "tag", v.imageName(branch), tag)
 }
 
 func prepareDockerResources() {
 	must(os.RemoveAll("var/docker/resources"))
 	must(os.MkdirAll("var/docker/resources", 0755))
-	download("https://storage.googleapis.com/kubernetes-release/release/v"+kubectlVersion+"/bin/linux/amd64/kubectl", "var/docker/resources/usr/bin/kubectl", 0755)
+	download("https://dl.k8s.io/release/v"+kubectlVersion+"/bin/linux/amd64/kubectl", "var/docker/resources/usr/bin/kubectl", 0755)
 	downloadFromTarGz("https://download.docker.com/linux/static/stable/x86_64/docker-"+dockerVersion+".tgz", "docker/docker", "var/docker/resources/usr/bin/docker", 0755)
 	download("https://github.com/docker/machine/releases/download/v"+dockerMachineVersion+"/docker-machine-Linux-x86_64", "var/docker/resources/usr/bin/docker-machine", 0755)
-	download("https://github.com/theupdateframework/notary/releases/download/v"+dockerNotaryVersion+"/notary-Linux-amd64", "var/docker/resources/usr/bin/notary", 0755)
 }

@@ -471,14 +471,14 @@ func Test_preserveServiceNodePorts_set(t *testing.T) {
 			"spec": map[string]interface{}{
 				"ports": []interface{}{
 					map[string]interface{}{
-						"port":     int64(111),
 						"name":     "foo",
+						"port":     int64(111),
 						"nodePort": int64(123),
 					},
 					map[string]interface{}{
+						"name":     "bar",
 						"port":     int64(333),
 						"nodePort": int64(234),
-						"name":     "bar",
 					},
 				},
 			},

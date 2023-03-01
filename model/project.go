@@ -3,7 +3,7 @@ package model
 import (
 	"fmt"
 	"github.com/echocat/kubor/common"
-	"github.com/echocat/kubor/log"
+	"github.com/echocat/slf4g"
 	"gopkg.in/yaml.v2"
 	"io"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -141,20 +141,20 @@ func (instance *ProjectFactory) Create(context string) (*Project, error) {
 	if log.IsDebugEnabled() {
 		name := result.ArtifactId.String()
 		l := log.
-			WithField("source", result.Source).
-			WithField("artifactId", result.ArtifactId)
+			With("source", result.Source).
+			With("artifactId", result.ArtifactId)
 
 		if result.GroupId != "" {
 			name = fmt.Sprintf("%s:%s", result.GroupId, name)
-			l = l.WithField("groupId", result.GroupId)
+			l = l.With("groupId", result.GroupId)
 		}
 		if result.Release != "" {
 			name = fmt.Sprintf("%s:%s", name, result.Release)
-			l = l.WithField("release", result.Release)
+			l = l.With("release", result.Release)
 		}
 
 		for k, v := range result.Values {
-			l = l.WithField("value."+k, v)
+			l = l.With("value."+k, v)
 		}
 
 		l.Debug("Project %s", name)

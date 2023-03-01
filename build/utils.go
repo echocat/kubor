@@ -5,8 +5,8 @@ import (
 	"bytes"
 	"compress/gzip"
 	"fmt"
+	"github.com/echocat/slf4g"
 	"io"
-	"log"
 	"net/http"
 	"os"
 	"os/exec"
@@ -18,10 +18,9 @@ import (
 )
 
 const (
-	kubectlVersion       = "1.17.2"
-	dockerVersion        = "19.03.5"
+	kubectlVersion       = "1.26.0"
+	dockerVersion        = "23.0.1"
 	dockerMachineVersion = "0.16.2"
-	dockerNotaryVersion  = "0.6.1"
 )
 
 var (
@@ -30,7 +29,10 @@ var (
 )
 
 func download(url string, to string, mode os.FileMode) {
-	log.Printf("Download %s to %s(%v)...", url, to, mode)
+	log.With("url", url).
+		With("target", to).
+		With("mode", mode).
+		Info("Download...")
 	body := startDownload(url)
 	//noinspection GoUnhandledErrorResult
 	defer body.Close()
@@ -38,7 +40,12 @@ func download(url string, to string, mode os.FileMode) {
 }
 
 func downloadFromTarGz(url string, partName string, to string, mode os.FileMode) {
-	log.Printf("Download %s of %s to %s(%v)...", partName, url, to, mode)
+	log.With("url", url).
+		With("part", partName).
+		With("target", to).
+		With("mode", mode).
+		Info("Download...")
+
 	body := startDownload(url)
 	//noinspection GoUnhandledErrorResult
 	defer body.Close()
@@ -111,7 +118,8 @@ func executeTo(customizer cmdCustomizer, stderr, stdout io.Writer, args ...strin
 	if len(args) <= 0 {
 		panic("no arguments provided")
 	}
-	log.Printf("Execute: %s", quoteAndJoin(args...))
+	log.With("command", args).
+		Info("Execute...")
 
 	cmd := exec.Command(args[0], args[1:]...)
 	cmd.Stderr = stderr

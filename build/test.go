@@ -35,7 +35,7 @@ func test(branch, commit string) {
 
 func testGoCode(t target) {
 	executeTo(func(cmd *exec.Cmd) {
-		cmd.Env = append(os.Environ(), "GOOS="+t.os, "GOARCH="+t.arch)
+		cmd.Env = append(os.Environ(), "GOOS="+t.os, "GOARCH="+t.arch, "CGO_ENABLED=0")
 	}, os.Stderr, os.Stdout, "go", "test", "-v", "./...")
 }
 
@@ -60,11 +60,10 @@ func testDocker(branch, commit string, v dockerVariant) {
 	testDockerByExpectingResponse(branch, v, `GitVersion:"v`+kubectlVersion+`"`, "sh", "-c", "kubectl version || true")
 	testDockerByExpectingResponse(branch, v, "Version:           "+dockerVersion+"\n", "sh", "-c", "docker version || true")
 	testDockerByExpectingResponse(branch, v, "version "+dockerMachineVersion+",", "sh", "-c", "docker-machine version || true")
-	testDockerByExpectingResponse(branch, v, "Version:    "+dockerNotaryVersion+"\n", "sh", "-c", "notary version || true")
 }
 
 func testDockerByExpectingResponse(branch string, v dockerVariant, expectedPartOfResponse string, command ...string) {
-	call := append([]string{"docker", "run", "--rm", v.imageName("TEST" + branch + "TEST")}, command...)
+	call := append([]string{dockerCommand, "run", "--rm", v.imageName("TEST" + branch + "TEST")}, command...)
 	response := executeAndRecord(call...)
 	if !strings.Contains(response, expectedPartOfResponse) {
 		panic(fmt.Sprintf("Command failed [%s]\nResponse should contain: %s\nBut response was: %s",

@@ -7,7 +7,6 @@ import (
 	appsv1beta2 "k8s.io/api/apps/v1beta2"
 	batchv1 "k8s.io/api/batch/v1"
 	batchv1beta1 "k8s.io/api/batch/v1beta1"
-	batchv2alpha1 "k8s.io/api/batch/v2alpha1"
 	v1 "k8s.io/api/core/v1"
 	extensionsv1beta1 "k8s.io/api/extensions/v1beta1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -48,7 +47,6 @@ var GitlabDiscoveryReceiverGvks = model.BuildGroupVersionKinds(v1.SchemeGroupVer
 	With(extensionsv1beta1.SchemeGroupVersion, &extensionsv1beta1.ReplicaSet{}).
 	With(batchv1.SchemeGroupVersion, &batchv1.Job{}).
 	With(batchv1beta1.SchemeGroupVersion, &batchv1beta1.CronJob{}).
-	With(batchv2alpha1.SchemeGroupVersion, &batchv2alpha1.CronJob{}).
 	Build()
 
 func init() {

@@ -1,8 +1,9 @@
+//go:build windows
 // +build windows
 
 package wrapper
 
-import "github.com/echocat/kubor/log"
+import "github.com/echocat/slf4g"
 
 func noticeAfterCreation(unixScriptFile string) {
 	log.Warn("You created successfully the kubor wrapper - this includes the file '%s'."+

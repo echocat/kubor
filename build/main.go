@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/alecthomas/kingpin"
+	_ "github.com/echocat/slf4g/native"
 	"os"
 	"regexp"
 )
@@ -13,21 +14,25 @@ var (
 	branch               = "snapshot"
 	commit               = "unknown"
 	withDocker           = true
+	dockerCommand        = "docker"
 	latestVersionPattern *regexp.Regexp
 )
 
 func init() {
 	app.Flag("branch", "something like either main, v1.2.3 or snapshot-feature-foo").
 		Required().
-		Envar("TRAVIS_BRANCH").
+		Envar("GITHUB_REF_NAME").
 		StringVar(&branch)
 	app.Flag("commit", "something like 463e189796d5e96a7b605ab51985458faf8fd0d4").
 		Required().
-		Envar("TRAVIS_COMMIT").
+		Envar("GITHUB_SHA").
 		StringVar(&commit)
-	app.Flag("withDocker", "enables docker tests and builds").
+	app.Flag("docker.enabled", "enables docker tests and builds").
 		Default("true").
 		BoolVar(&withDocker)
+	app.Flag("docker.command", "command to use on docker builds").
+		Default("docker").
+		StringVar(&dockerCommand)
 	app.Flag("latestVersionPattern", "everything what matches here will be a latest tag").
 		Envar("LATEST_VERSION_PATTERN").
 		RegexpVar(&latestVersionPattern)

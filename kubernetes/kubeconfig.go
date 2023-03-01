@@ -4,7 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/echocat/kubor/common"
-	"github.com/echocat/kubor/log"
+	"github.com/echocat/slf4g"
 	"github.com/imdario/mergo"
 	"k8s.io/client-go/discovery"
 	restclient "k8s.io/client-go/rest"
@@ -74,7 +74,7 @@ func NewKubeClientConfig() (clientcmd.ClientConfig, string, error) {
 		selectedContext = rc.CurrentContext
 	}
 	log.
-		WithField("context", selectedContext).
+		With("context", selectedContext).
 		Debug("Selected context: %v", selectedContext)
 	return result, selectedContext, nil
 }

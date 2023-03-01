@@ -1,0 +1,90 @@
+name: Continuous Integration
+on:
+  pull_request:
+  push:
+jobs:
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Set up Go
+        uses: actions/setup-go@v3
+        with:
+          go-version: '1.20.1'
+
+      - name: Set up Docker
+        uses: docker/setup-buildx-action@v2
+
+      - name: Check out
+        uses: actions/checkout@v3
+
+      - name: Cache
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+
+      - name: Get dependencies
+        run: |
+          go mod download
+
+      - name: Tests
+        run: |
+          go run ./build test
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/')
+    name: Release
+    needs: test
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Set up Go
+        uses: actions/setup-go@v3
+        with:
+          go-version: '1.20.1'
+
+      - name: Set up Docker
+        uses: docker/setup-buildx-action@v2
+
+      - name: Docker login
+        env:
+          REGISTRY_USER: ${{ github.actor }}
+          REGISTRY_PASSWORD: ${{ github.token }}
+        run: |
+          echo "$REGISTRY_PASSWORD" | docker login -u "$REGISTRY_USER" --password-stdin ghcr.io
+
+      - name: Check out
+        uses: actions/checkout@v3
+
+      - name: Cache
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+
+      - name: Get dependencies
+        run: |
+          go mod download
+
+      - name: Build
+        run: |
+          go run ./build build
+
+      - name: Deploy images
+        run: |
+          go run ./build deploy
+
+      - name: Upload Artifacts
+        uses: softprops/action-gh-release@v1
+        with:
+          draft: true
+          files: dist/*
+          generate_release_notes: true

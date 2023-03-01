@@ -3,7 +3,6 @@ package template
 import (
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 )
 
@@ -41,7 +40,7 @@ func (instance *FactoryImpl) New(name string, code string) (Template, error) {
 }
 
 func (instance *FactoryImpl) NewFromReader(name string, reader io.Reader) (Template, error) {
-	if content, err := ioutil.ReadAll(reader); err != nil {
+	if content, err := io.ReadAll(reader); err != nil {
 		return nil, err
 	} else {
 		return instance.new(name, nil, string(content))
@@ -56,7 +55,7 @@ func (instance *FactoryImpl) NewFromFile(file string) (Template, error) {
 	} else {
 		//noinspection GoUnhandledErrorResult
 		defer f.Close()
-		if content, err := ioutil.ReadAll(f); err != nil {
+		if content, err := io.ReadAll(f); err != nil {
 			return nil, fmt.Errorf("cannot read template from %s: %w", file, err)
 		} else {
 			return instance.new(file, &file, string(content))

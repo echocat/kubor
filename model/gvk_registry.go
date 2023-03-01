@@ -6,7 +6,6 @@ import (
 	appsv1beta2 "k8s.io/api/apps/v1beta2"
 	batchv1 "k8s.io/api/batch/v1"
 	batchv1beta1 "k8s.io/api/batch/v1beta1"
-	batchv2alpha1 "k8s.io/api/batch/v2alpha1"
 	v1 "k8s.io/api/core/v1"
 	extensionsv1beta1 "k8s.io/api/extensions/v1beta1"
 	networkingv1 "k8s.io/api/networking/v1"
@@ -60,7 +59,7 @@ var DefaultGroupVersionKindRegistry = (&GroupVersionKindRegistry{}).
 		Build()).
 	With(BuildGroupVersionKinds(batchv1.SchemeGroupVersion, &batchv1.Job{}).Build()).
 	With(BuildGroupVersionKinds(batchv1beta1.SchemeGroupVersion, &batchv1beta1.CronJob{}).
-		With(batchv2alpha1.SchemeGroupVersion, &batchv2alpha1.CronJob{}).
+		With(batchv1beta1.SchemeGroupVersion, &batchv1beta1.CronJob{}).
 		Build())
 
 type GroupVersionKindRegistry struct {

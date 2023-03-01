@@ -4,8 +4,10 @@ import (
 	"context"
 	"fmt"
 	"github.com/echocat/kubor/common"
-	"github.com/echocat/kubor/log"
 	"github.com/echocat/kubor/model"
+	"github.com/echocat/slf4g"
+	"github.com/echocat/slf4g/fields"
+	"github.com/echocat/slf4g/level"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -43,9 +45,9 @@ func NewApplyObject(
 	return &ApplyObject{
 		project: project,
 		log: log.
-			WithField("source", source).
-			WithField("object", objectResource).
-			WithField("stage", stage),
+			With("source", source).
+			With("object", objectResource).
+			With("stage", stage),
 		object:  objectResource,
 		runtime: runtime,
 	}, nil
@@ -91,20 +93,20 @@ func (instance *ApplyObject) Execute(scope string, dryRunOn model.DryRunOn) (err
 		return err
 	}
 	l := instance.log.
-		WithField("scope", scope).
-		WithField("stage", stage).
-		WithField("action", "checkExistence")
+		With("scope", scope).
+		With("stage", stage).
+		With("action", "checkExistence")
 	original, err := instance.object.Get(nil)
 	if errors.IsNotFound(err) {
 		if !applyOn.OnCreate() {
 			l.
-				WithField("status", "skipped").
+				With("status", "skipped").
 				Debug("%v does not exist but should not be created - skipping.", instance.object)
 			return nil
 		}
 
 		l.
-			WithField("status", "notFound").
+			With("status", "notFound").
 			Debug("%v does not exist - it will be created.", instance.object)
 		instance.original = nil
 
@@ -114,7 +116,7 @@ func (instance *ApplyObject) Execute(scope string, dryRunOn model.DryRunOn) (err
 	} else {
 		if !applyOn.OnUpdate() {
 			l.
-				WithField("status", "skipped").
+				With("status", "skipped").
 				Debug("%v does exist but should not be updated - skipping.", instance.object)
 			return nil
 		}
@@ -125,8 +127,8 @@ func (instance *ApplyObject) Execute(scope string, dryRunOn model.DryRunOn) (err
 		}
 		instance.original = &originalResource
 		l.
-			WithField("status", "success").
-			WithDeepFieldOn("response", original, l.IsDebugEnabled).
+			With("status", "success").
+			With("response", fields.RequireMaximalLevel(level.Debug, original)).
 			Debug("%v does exist - it will be updated.", instance.object)
 
 		return instance.update(scope, *original, dryRunOn)
@@ -139,8 +141,8 @@ func (instance *ApplyObject) Wait(scope string, global model.WaitUntil) (relevan
 	skip := false
 	start := time.Now()
 	l := instance.log.
-		WithField("scope", scope).
-		WithField("action", "wait")
+		With("scope", scope).
+		With("action", "wait")
 
 	ctx, finished := context.WithCancel(context.Background())
 
@@ -155,23 +157,23 @@ func (instance *ApplyObject) Wait(scope string, global model.WaitUntil) (relevan
 	}()
 	defer func() {
 		finished()
-		ld := l.WithField("duration", time.Now().Sub(start))
+		ld := l.With("duration", time.Now().Sub(start))
 		if err != nil {
 			ldd := ld.
 				WithError(err).
-				WithField("status", "failed")
+				With("status", "failed")
 			if ldd.IsDebugEnabled() {
 				ldd.Error("Wait %vuntil %v is ready... FAILED!", wuf, instance.object)
 			} else {
 				ldd.Error("%v is not ready.", instance.object)
 			}
 		} else if skip {
-			ldd := ld.WithField("status", "skipped")
+			ldd := ld.With("status", "skipped")
 			if ldd.IsDebugEnabled() {
 				ldd.Info("Wait %vuntil %v is ready... SKIPPED!", wuf, instance.object)
 			}
 		} else {
-			ldd := ld.WithField("status", "success")
+			ldd := ld.With("status", "success")
 			if ldd.IsDebugEnabled() {
 				ldd.Info("Wait %vuntil %v is ready... DONE!", wuf, instance.object)
 			} else {
@@ -188,9 +190,9 @@ func (instance *ApplyObject) Wait(scope string, global model.WaitUntil) (relevan
 	wuf.WaitUntil = wu
 
 	if to := wu.Timeout; to != nil {
-		l = l.WithField("timeout", *to)
+		l = l.With("timeout", *to)
 	} else {
-		l = l.WithField("timeout", "unlimited")
+		l = l.With("timeout", "unlimited")
 	}
 	l.Debug("Wait %vuntil %v is ready...", wuf, instance.object)
 
@@ -203,7 +205,7 @@ func (instance *ApplyObject) Wait(scope string, global model.WaitUntil) (relevan
 		if provider := LogProviderFor(instance.runtime, instance.applied, owu.LogSourceContainerName); provider != nil {
 			go func() {
 				if err := PrintLogs(ctx, provider, lc.OpenForWrite); err != nil {
-					l.WithError(err).WithField("consumer", lc).Error("cannot consume logs")
+					l.WithError(err).With("consumer", lc).Error("cannot consume logs")
 				}
 			}()
 		}
@@ -240,8 +242,8 @@ func (instance *ApplyObject) Wait(scope string, global model.WaitUntil) (relevan
 		}
 		duration := time.Now().Sub(start)
 		l.
-			WithField("duration", duration).
-			WithField("status", "continue").
+			With("duration", duration).
+			With("status", "continue").
 			Info("%v is still not ready after %v. Continue waiting...", resource, duration)
 	}
 }
@@ -291,7 +293,7 @@ func (instance *ApplyObject) watchRun(resource ObjectResource, generation int64,
 
 func (instance *ApplyObject) onWatchEvent(event watch.Event, l log.Logger, generation int64, wus model.WaitUntilStage) (done bool, err error) {
 	objectInfo, _ := GetObjectInfo(event.Object, instance.project.Scheme)
-	l = l.WithDeepFieldOn("event", event, log.IsTraceEnabled)
+	l = l.With("event", fields.RequireMaximalLevel(level.Trace, event))
 	l.Trace("Received event %v on %v.", event.Type, objectInfo)
 
 	if !instance.matchesReferenceOfObjectToApplyAndGeneration(event.Object, generation) {
@@ -342,17 +344,17 @@ func (instance *ApplyObject) onWatchEventForExecuted(event watch.Event, objectIn
 func (instance *ApplyObject) create(scope string, dry model.DryRunOn) (err error) {
 	start := time.Now()
 	l := instance.log.
-		WithField("scope", scope).
-		WithField("action", "create").
-		WithField("dryRunOn", dry)
+		With("scope", scope).
+		With("action", "create").
+		With("dryRunOn", dry)
 	defer func() {
 		ld := l.
-			WithField("duration", time.Now().Sub(start)).
-			WithDeepFieldOn("response", instance.applied, l.IsTraceEnabled)
+			With("duration", time.Now().Sub(start)).
+			With("response", fields.RequireMaximalLevel(level.Trace, instance.applied))
 		if err != nil {
 			ldd := ld.
 				WithError(err).
-				WithField("status", "failed")
+				With("status", "failed")
 			if ldd.IsDebugEnabled() {
 				ldd.Error("Create %v... FAILED!", instance.object)
 			} else {
@@ -360,7 +362,7 @@ func (instance *ApplyObject) create(scope string, dry model.DryRunOn) (err error
 			}
 		} else {
 			ldd := ld.
-				WithField("status", "success")
+				With("status", "success")
 			if ldd.IsDebugEnabled() {
 				ldd.Info("Create %v... SUCCESS!", instance.object)
 			} else {
@@ -393,17 +395,17 @@ func (instance *ApplyObject) create(scope string, dry model.DryRunOn) (err error
 func (instance *ApplyObject) update(scope string, original unstructured.Unstructured, dry model.DryRunOn) (err error) {
 	start := time.Now()
 	l := instance.log.
-		WithField("scope", scope).
-		WithField("action", "update").
-		WithField("dryRunOn", dry)
+		With("scope", scope).
+		With("action", "update").
+		With("dryRunOn", dry)
 	defer func() {
 		ld := l.
-			WithField("duration", time.Now().Sub(start)).
-			WithDeepFieldOn("response", instance.applied, l.IsTraceEnabled)
+			With("duration", time.Now().Sub(start)).
+			With("response", fields.RequireMaximalLevel(level.Trace, instance.applied))
 		if err != nil {
 			ldd := ld.
 				WithError(err).
-				WithField("status", "failed")
+				With("status", "failed")
 			if ldd.IsDebugEnabled() {
 				ldd.Error("Update %v... FAILED!", instance.object)
 			} else {
@@ -411,7 +413,7 @@ func (instance *ApplyObject) update(scope string, original unstructured.Unstruct
 			}
 		} else {
 			ldd := ld.
-				WithField("status", "success")
+				With("status", "success")
 			if ldd.IsDebugEnabled() {
 				ldd.Info("Update %v... SUCCESS!", instance.object)
 			} else {
@@ -496,22 +498,22 @@ func (instance *ApplyObject) getGenerationOf(runtimeObject runtime.Object) *int6
 func (instance *ApplyObject) Delete(scope string) (err error) {
 	start := time.Now()
 	l := instance.log.
-		WithField("scope", scope).
-		WithField("action", "delete")
+		With("scope", scope).
+		With("action", "delete")
 
 	defer func() {
-		ld := l.WithField("duration", time.Now().Sub(start))
+		ld := l.With("duration", time.Now().Sub(start))
 		if err != nil {
 			ldd := ld.
 				WithError(err).
-				WithField("status", "failed")
+				With("status", "failed")
 			if ldd.IsDebugEnabled() {
 				ldd.Error("Deleting %v... FAILED!", instance.object)
 			} else {
 				ldd.Error("Was not able to delete %v.", instance.object)
 			}
 		} else {
-			ldd := ld.WithField("status", "success")
+			ldd := ld.With("status", "success")
 			if ldd.IsDebugEnabled() {
 				ldd.Info("Deleting %v... DONE!", instance.object)
 			} else {
@@ -555,15 +557,15 @@ func (instance *ApplyObject) Rollback(scope string) {
 	}
 	var err error
 	start := time.Now()
-	l := instance.log.WithField("action", "rollback").WithField("scope", scope)
+	l := instance.log.With("action", "rollback").With("scope", scope)
 	defer func() {
 		instance.applied = nil
 		ld := l.
-			WithField("duration", time.Now().Sub(start))
+			With("duration", time.Now().Sub(start))
 		if err != nil {
 			ldd := ld.
 				WithError(err).
-				WithField("status", "failed")
+				With("status", "failed")
 			if ldd.IsDebugEnabled() {
 				ldd.Warn("Rollback %v... FAILED!", instance.object)
 			} else {
@@ -571,7 +573,7 @@ func (instance *ApplyObject) Rollback(scope string) {
 			}
 		} else {
 			ldd := ld.
-				WithField("status", "success")
+				With("status", "success")
 			if ldd.IsDebugEnabled() {
 				ldd.Info("Rollback %v... SUCCESS!", instance.object)
 			} else {
@@ -693,12 +695,12 @@ func (instance StagedApplySet) Execute(scope string, dry model.DryRunOn, wu *mod
 func (instance StagedApplySet) ExecuteStage(scope string, stage model.Stage, dryRunOn model.DryRunOn, wu *model.WaitUntil) (relevantDuration time.Duration, err error) {
 	set := instance[stage]
 	start := time.Now()
-	l := log.WithField("stage", stage).
-		WithField("scope", scope)
+	l := log.With("stage", stage).
+		With("scope", scope)
 
 	l.Info("Entering %s/%v...", scope, stage)
 	defer func() {
-		l = l.WithField("duration", time.Now().Sub(start))
+		l = l.With("duration", time.Now().Sub(start))
 		if err != nil {
 			set.Rollback(scope)
 			l.WithError(err).Error("Entering %s/%v... FAILED!", scope, stage)

@@ -6,7 +6,7 @@ import (
 	"runtime"
 )
 
-const imagePrefix = "echocat/kubor"
+const imagePrefix = "ghcr.io/echocat/kubor"
 
 var (
 	dockerVariants = []dockerVariant{
@@ -25,10 +25,14 @@ var (
 	linuxAmd64    = target{os: "linux", arch: "amd64"}
 	targets       = []target{
 		{os: "darwin", arch: "amd64"},
-		{os: "darwin", arch: "386"},
+		{os: "darwin", arch: "arm64"},
 		linuxAmd64,
 		{os: "linux", arch: "386"},
+		{os: "linux", arch: "arm64"},
+		{os: "linux", arch: "arm"},
 		{os: "windows", arch: "amd64"},
+		{os: "windows", arch: "arm"},
+		{os: "windows", arch: "arm64"},
 		{os: "windows", arch: "386"},
 	}
 )
