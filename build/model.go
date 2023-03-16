@@ -53,12 +53,12 @@ func (instance dockerVariant) baseImageName() string {
 func (instance dockerVariant) imageName(branch string) string {
 	result := imagePrefix + ":" + instance.base
 	if branch != "" {
-		result += "-" + instance.cleanBranchName(branch)
+		result += "-" + sanitizeBranchName(branch)
 	}
 	return result
 }
 
-func (instance dockerVariant) cleanBranchName(in string) string {
+func sanitizeBranchName(in string) string {
 	return forbiddenBranchCharacters.ReplaceAllString(in, "_")
 }
 

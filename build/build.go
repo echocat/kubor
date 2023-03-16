@@ -92,7 +92,7 @@ func buildDocker(branch string, v dockerVariant, buildResources bool, forTesting
 	if buildResources {
 		prepareDockerResources()
 	}
-	version := branch
+	version := sanitizeBranchName(branch)
 	if forTesting {
 		version = "TEST" + version + "TEST"
 	}
