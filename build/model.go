@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"path/filepath"
+	"regexp"
 	"runtime"
 )
 
@@ -35,6 +36,8 @@ var (
 		{os: "windows", arch: "arm64"},
 		{os: "windows", arch: "386"},
 	}
+
+	forbiddenBranchCharacters = regexp.MustCompile(`[^a-zA-Z0-9_.-]+`)
 )
 
 type dockerVariant struct {
@@ -50,9 +53,13 @@ func (instance dockerVariant) baseImageName() string {
 func (instance dockerVariant) imageName(branch string) string {
 	result := imagePrefix + ":" + instance.base
 	if branch != "" {
-		result += "-" + branch
+		result += "-" + instance.cleanBranchName(branch)
 	}
 	return result
+}
+
+func (instance dockerVariant) cleanBranchName(in string) string {
+	return forbiddenBranchCharacters.ReplaceAllString(in, "_")
 }
 
 type target struct {
