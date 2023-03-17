@@ -11,7 +11,7 @@ import (
 var (
 	_ = app.Command("test", "executes tests for the project").
 		Action(func(*kingpin.ParseContext) error {
-			test(branch, commit)
+			test(sanitizeBranchName(branch), commit)
 			return nil
 		})
 )

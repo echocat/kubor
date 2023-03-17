@@ -7,13 +7,13 @@ import (
 var (
 	_ = app.Command("deploy", "executes deploys for the project").
 		Action(func(*kingpin.ParseContext) error {
-			deploy(branch)
+			deploy(sanitizeBranchName(branch))
 			return nil
 		})
 	_ = app.Command("build-and-deploy", "executes builds and deploys for the project").
 		Action(func(*kingpin.ParseContext) error {
-			build(branch, commit)
-			deploy(branch)
+			build(sanitizeBranchName(branch), commit)
+			deploy(sanitizeBranchName(branch))
 			return nil
 		})
 )

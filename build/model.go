@@ -53,7 +53,7 @@ func (instance dockerVariant) baseImageName() string {
 func (instance dockerVariant) imageName(branch string) string {
 	result := imagePrefix + ":" + instance.base
 	if branch != "" {
-		result += "-" + sanitizeBranchName(branch)
+		result += "-" + branch
 	}
 	return result
 }

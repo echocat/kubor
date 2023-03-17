@@ -12,7 +12,7 @@ import (
 var (
 	_ = app.Command("build", "executes builds for the project").
 		Action(func(*kingpin.ParseContext) error {
-			build(branch, commit)
+			build(sanitizeBranchName(branch), commit)
 			return nil
 		})
 )
@@ -92,7 +92,7 @@ func buildDocker(branch string, v dockerVariant, buildResources bool, forTesting
 	if buildResources {
 		prepareDockerResources()
 	}
-	version := sanitizeBranchName(branch)
+	version := branch
 	if forTesting {
 		version = "TEST" + version + "TEST"
 	}
