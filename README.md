@@ -1,6 +1,6 @@
 # kubor
 
-[![Build Status](https://travis-ci.org/echocat/kubor.svg?branch=master)](https://travis-ci.org/echocat/kubor)
+[![Continuous Integration](https://github.com/echocat/kubor/actions/workflows/ci.yml/badge.svg)](https://github.com/echocat/kubor/actions/workflows/ci.yml)
 
 Safely bringing repositories using templating and charting inside CI/CD pipelines to Kubernetes.
 

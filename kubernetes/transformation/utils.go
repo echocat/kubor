@@ -5,6 +5,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"reflect"
+	"sort"
 	"strings"
 )
 
@@ -96,11 +97,16 @@ func sliceToNamedMap(in []interface{}, nameField string) (result map[string]map[
 func mapToNamedSlice(in map[string]map[string]interface{}, nameField string) (result []interface{}) {
 	result = make([]interface{}, len(in))
 
-	var i int
-	for name, entry := range in {
+	names := make([]string, 0, len(in))
+	for name := range in {
+		names = append(names, name)
+	}
+	sort.StringsAreSorted(names)
+
+	for i, name := range names {
+		entry := in[name]
 		entry[nameField] = name
 		result[i] = entry
-		i++
 	}
 
 	return

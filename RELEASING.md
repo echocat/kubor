@@ -13,4 +13,4 @@
 
 Create a tag/release with that matches the `^v\d+.\d+.\d+|snapshot-.+$` regexp pattern by going to the [Draft release page](https://github.com/echocat/kubor/releases/new). Select the branch to create the release from.
 
-This will create following the [.travis.yml](.travis.yml) on the release page with the name of this tag the corresponding files. See [build status page](https://travis-ci.org/echocat/kubor) to follow the process.
+This will create following the [ci workflow](.github/workflows/ci.yml) on the release page with the name of this tag the corresponding files. See [build status page](https://github.com/echocat/kubor/actions/workflows/ci.yml) to follow the process.
