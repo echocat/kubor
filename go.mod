@@ -11,7 +11,7 @@ require (
 	github.com/google/uuid v1.3.0
 	github.com/huandu/xstrings v1.4.0
 	github.com/imdario/mergo v0.3.15
-	github.com/stretchr/testify v1.8.2
+	github.com/stretchr/testify v1.8.3
 	golang.org/x/text v0.9.0
 	gopkg.in/yaml.v2 v2.4.0
 	k8s.io/api v0.27.2
