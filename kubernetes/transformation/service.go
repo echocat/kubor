@@ -131,6 +131,9 @@ func getNameOfUncheckedNamedMap(what interface{}, index int) (string, map[string
 		return "", nil, err
 	}
 	name, err := getNameOfNamedMap(m, index)
+	if err != nil {
+		return "", nil, err
+	}
 	return name, m, nil
 }
 
