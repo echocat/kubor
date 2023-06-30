@@ -1,9 +1,11 @@
 package transformation
 
 import (
+	"fmt"
 	"github.com/echocat/kubor/model"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"reflect"
 )
 
 func init() {
@@ -72,11 +74,11 @@ func preserveServiceNodePorts(_ *model.Project, existing unstructured.Unstructur
 		return nil
 	}
 
-	existingPorts, _, err := NestedNamedSliceAsMaps(existing.Object, "name", "spec", "ports")
+	existingPorts, _, err := unstructured.NestedSlice(existing.Object, "spec", "ports")
 	if err != nil {
 		return err
 	}
-	targetPorts, _, err := NestedNamedSliceAsMaps(target.Object, "name", "spec", "ports")
+	targetPorts, _, err := unstructured.NestedSlice(target.Object, "spec", "ports")
 	if err != nil {
 		return err
 	}
@@ -84,8 +86,16 @@ func preserveServiceNodePorts(_ *model.Project, existing unstructured.Unstructur
 		return nil
 	}
 
-	for name, existingPort := range existingPorts {
-		if targetPort, ok := targetPorts[name]; ok {
+	for i, pExistingPort := range existingPorts {
+		name, existingPort, err := getNameOfUncheckedNamedMap(pExistingPort, i)
+		if err != nil {
+			return err
+		}
+		targetPort, targetIndex, err := findByNameOfUncheckedNamedMap(targetPorts, name)
+		if err != nil {
+			return err
+		}
+		if targetIndex >= 0 {
 			existingNodePort, _, err := unstructured.NestedInt64(existingPort, "nodePort")
 			if err != nil {
 				return err
@@ -99,10 +109,74 @@ func preserveServiceNodePorts(_ *model.Project, existing unstructured.Unstructur
 				if err := unstructured.SetNestedField(targetPort, existingNodePort, "nodePort"); err != nil {
 					return err
 				}
-				targetPorts[name] = targetPort
+				targetPorts[targetIndex] = targetPort
 			}
 		}
 	}
 
-	return SetNestedNamedMapsAsSlice(target.Object, "name", targetPorts, "spec", "ports")
+	return unstructured.SetNestedSlice(target.Object, targetPorts, "spec", "ports")
+}
+
+func castUncheckedNamedMap(what interface{}, index int) (map[string]interface{}, error) {
+	m, ok := what.(map[string]interface{})
+	if !ok {
+		return nil, fmt.Errorf("existing port entry #%d should be of type map[string]interface{}, but got: %v", index, reflect.TypeOf(what))
+	}
+	return m, nil
+}
+
+func getNameOfUncheckedNamedMap(what interface{}, index int) (string, map[string]interface{}, error) {
+	m, err := castUncheckedNamedMap(what, index)
+	if err != nil {
+		return "", nil, err
+	}
+	name, err := getNameOfNamedMap(m, index)
+	if err != nil {
+		return "", nil, err
+	}
+	return name, m, nil
+}
+
+func getNameOfNamedMap(what map[string]interface{}, index int) (string, error) {
+	pv, ok := what["name"]
+	if !ok {
+		return "", fmt.Errorf("existing port entry #%d should contain field name, but it is not contained", index)
+	}
+	v, ok := pv.(string)
+	if !ok {
+		return "", fmt.Errorf("existing port entry #%d should contain field name of type string, but : %v", index, reflect.TypeOf(pv))
+	}
+	return v, nil
+}
+
+func matchesRequiredNameOfUncheckedNamedMap(what interface{}, index int, requiredName string) (bool, error) {
+	m, ok := what.(map[string]interface{})
+	if !ok {
+		return false, fmt.Errorf("existing port entry #%d should be of type map[string]interface{}, but got: %v", index, reflect.TypeOf(what))
+	}
+
+	actualName, err := getNameOfNamedMap(m, index)
+	if err != nil {
+		// Ignore
+		return false, nil
+	}
+
+	return requiredName == actualName, nil
+}
+
+func findByNameOfUncheckedNamedMap(candidates []interface{}, requiredName string) (map[string]interface{}, int, error) {
+	for i, candidate := range candidates {
+		matches, err := matchesRequiredNameOfUncheckedNamedMap(candidate, i, requiredName)
+		if err != nil {
+			return nil, -1, err
+		}
+		if matches {
+			casted, err := castUncheckedNamedMap(candidate, i)
+			if err != nil {
+				return nil, -1, err
+			}
+			return casted, i, nil
+		}
+	}
+	return nil, -1, nil
 }
