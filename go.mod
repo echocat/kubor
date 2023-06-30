@@ -5,7 +5,7 @@ module github.com/echocat/kubor
 require (
 	github.com/alecthomas/kingpin v2.2.6+incompatible
 	github.com/aokoli/goutils v1.1.1
-	github.com/echocat/slf4g v1.4.1
+	github.com/echocat/slf4g v1.4.2
 	github.com/echocat/slf4g/native v1.4.1
 	github.com/google/gnostic v0.6.9
 	github.com/google/uuid v1.3.0
