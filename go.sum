@@ -24,8 +24,8 @@ github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/docopt/docopt-go v0.0.0-20180111231733-ee0de3bc6815/go.mod h1:WwZ+bS3ebgob9U8Nd0kOddGdZWjyMGR8Wziv+TBNwSE=
 github.com/echocat/slf4g v0.0.0/go.mod h1:R4ge09pgerMnd/bJQeKVFm4igVYgJW6CqfUOzT/CA10=
-github.com/echocat/slf4g v1.4.2 h1:DT66E4tFnK9wUdTX7AbO0PyffhmRDc40vg6JSlj32KE=
-github.com/echocat/slf4g v1.4.2/go.mod h1:h3PyXsLZEun57/b4pISjYvsbrCDHIyuBcJNQw+e65jk=
+github.com/echocat/slf4g v1.5.0 h1:KFd+9tyHY1n+SCQ1gVgc571rqdVdNHa2Zg1+/o05n3c=
+github.com/echocat/slf4g v1.5.0/go.mod h1:h3PyXsLZEun57/b4pISjYvsbrCDHIyuBcJNQw+e65jk=
 github.com/echocat/slf4g/native v1.4.1 h1:A5hhJhDZrgEP0Xb3rZN25kNOl3kp38p5f0hsRophb0o=
 github.com/echocat/slf4g/native v1.4.1/go.mod h1:xUHMo76WMTt5U6jgaQpFN1e53lTihlQC3+ZHA/o8ZPw=
 github.com/emicklei/go-restful/v3 v3.10.1 h1:rc42Y5YTp7Am7CS630D7JmhRjq4UlEUuEKfrDac4bSQ=
