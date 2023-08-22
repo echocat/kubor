@@ -8,7 +8,7 @@ require (
 	github.com/echocat/slf4g v1.5.0
 	github.com/echocat/slf4g/native v1.5.0
 	github.com/google/gnostic v0.6.9
-	github.com/google/uuid v1.3.0
+	github.com/google/uuid v1.3.1
 	github.com/huandu/xstrings v1.4.0
 	github.com/imdario/mergo v0.3.16
 	github.com/stretchr/testify v1.8.4
