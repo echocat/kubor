@@ -15,14 +15,14 @@ require (
 	golang.org/x/text v0.13.0
 	gopkg.in/yaml.v2 v2.4.0
 	k8s.io/api v0.28.3
-	k8s.io/apiextensions-apiserver v0.28.2
+	k8s.io/apiextensions-apiserver v0.28.3
 	k8s.io/apimachinery v0.28.3
-	k8s.io/client-go v0.28.2
+	k8s.io/client-go v0.28.3
 )
 
 require (
 	github.com/alecthomas/template v0.0.0-20190718012654-fb15b899a751 // indirect
-	github.com/alecthomas/units v0.0.0-20190924025748-f65c72e2690d // indirect
+	github.com/alecthomas/units v0.0.0-20211218093645-b94a6e3cc137 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/emicklei/go-restful/v3 v3.10.1 // indirect
 	github.com/evanphx/json-patch v4.12.0+incompatible // indirect
