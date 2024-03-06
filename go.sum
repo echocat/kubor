@@ -10,8 +10,8 @@ github.com/creack/pty v1.1.9/go.mod h1:oKZEueFk5CKHvIhNR5MUki03XCEU+Q6VDXinZuGJ3
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
-github.com/echocat/slf4g v1.5.2 h1:QBdnMI95Ju9j0VHsZ7IHGFKqrsF1EBN1n9EqWIjM4dw=
-github.com/echocat/slf4g v1.5.2/go.mod h1:YvF/d1TcPvT+/xiHStLHPI4xPT1GGeEmPczn2MSljNA=
+github.com/echocat/slf4g v1.5.3 h1:DdQGyHwdv3+hxRWJh+ZAikUDMVt4TWQg//kcsYJ1SLk=
+github.com/echocat/slf4g v1.5.3/go.mod h1:YvF/d1TcPvT+/xiHStLHPI4xPT1GGeEmPczn2MSljNA=
 github.com/echocat/slf4g/native v1.5.2 h1:DFXpybP8d3GcflOngj0H7NymJ+McJanNlQRxWL9yEfA=
 github.com/echocat/slf4g/native v1.5.2/go.mod h1:vCZn/wnp0xfdXlm5W1DwJI2SaLBc6NKaAqtNqe1y0VY=
 github.com/emicklei/go-restful/v3 v3.11.0 h1:rAQeMHw1c7zTmncogyy8VvRZwtkmkZ4FxERmMY4rD+g=
