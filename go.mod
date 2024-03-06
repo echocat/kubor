@@ -6,7 +6,7 @@ require (
 	github.com/alecthomas/kingpin v2.2.6+incompatible
 	github.com/aokoli/goutils v1.1.1
 	github.com/echocat/slf4g v1.5.3
-	github.com/echocat/slf4g/native v1.5.2
+	github.com/echocat/slf4g/native v1.5.3
 	github.com/google/gnostic-models v0.6.8
 	github.com/google/uuid v1.6.0
 	github.com/huandu/xstrings v1.4.0
@@ -44,7 +44,7 @@ require (
 	github.com/spf13/pflag v1.0.5 // indirect
 	golang.org/x/net v0.19.0 // indirect
 	golang.org/x/oauth2 v0.10.0 // indirect
-	golang.org/x/sys v0.15.0 // indirect
+	golang.org/x/sys v0.18.0 // indirect
 	golang.org/x/term v0.15.0 // indirect
 	golang.org/x/time v0.3.0 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
