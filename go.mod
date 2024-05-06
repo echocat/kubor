@@ -13,7 +13,7 @@ require (
 	github.com/huandu/xstrings v1.4.0
 	github.com/imdario/mergo v0.3.16
 	github.com/stretchr/testify v1.9.0
-	golang.org/x/text v0.14.0
+	golang.org/x/text v0.15.0
 	gopkg.in/yaml.v2 v2.4.0
 	k8s.io/api v0.30.0
 	k8s.io/apiextensions-apiserver v0.30.0
