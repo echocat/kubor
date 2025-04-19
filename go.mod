@@ -8,7 +8,7 @@ require (
 	github.com/aokoli/goutils v1.1.1
 	github.com/echocat/slf4g v1.5.3
 	github.com/echocat/slf4g/native v1.6.3
-	github.com/google/gnostic-models v0.6.8
+	github.com/google/gnostic-models v0.6.9
 	github.com/google/uuid v1.6.0
 	github.com/huandu/xstrings v1.5.0
 	github.com/imdario/mergo v0.3.16
