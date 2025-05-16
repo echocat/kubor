@@ -1,4 +1,5 @@
-go 1.21
+go 1.24.0
+
 toolchain go1.24.1
 
 module github.com/echocat/kubor
@@ -15,9 +16,9 @@ require (
 	github.com/stretchr/testify v1.10.0
 	golang.org/x/text v0.25.0
 	gopkg.in/yaml.v2 v2.4.0
-	k8s.io/api v0.33.0
+	k8s.io/api v0.33.1
 	k8s.io/apiextensions-apiserver v0.33.0
-	k8s.io/apimachinery v0.33.0
+	k8s.io/apimachinery v0.33.1
 	k8s.io/client-go v0.33.0
 )
 
