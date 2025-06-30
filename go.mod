@@ -9,7 +9,7 @@ require (
 	github.com/aokoli/goutils v1.1.1
 	github.com/echocat/slf4g v1.6.3
 	github.com/echocat/slf4g/native v1.6.3
-	github.com/google/gnostic-models v0.6.9
+	github.com/google/gnostic-models v0.7.0
 	github.com/google/uuid v1.6.0
 	github.com/huandu/xstrings v1.5.0
 	github.com/imdario/mergo v0.3.16
@@ -44,6 +44,7 @@ require (
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
+	go.yaml.in/yaml/v3 v3.0.3 // indirect
 	golang.org/x/net v0.38.0 // indirect
 	golang.org/x/oauth2 v0.27.0 // indirect
 	golang.org/x/sys v0.31.0 // indirect
