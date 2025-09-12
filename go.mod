@@ -1,7 +1,5 @@
 go 1.24.0
 
-toolchain go1.24.1
-
 module github.com/echocat/kubor
 
 require (
