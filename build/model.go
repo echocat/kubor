@@ -32,7 +32,6 @@ var (
 		{os: "linux", arch: "arm64"},
 		{os: "linux", arch: "arm"},
 		{os: "windows", arch: "amd64"},
-		{os: "windows", arch: "arm"},
 		{os: "windows", arch: "arm64"},
 		{os: "windows", arch: "386"},
 	}
